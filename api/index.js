@@ -42,11 +42,6 @@ if (process.env.NODE_ENV !== 'production') {
 module.exports = app;
 
 // Handler para Netlify Functions
-const serverlessExpress = require('aws-serverless-express');
-
-// Crear el handler para Netlify
-const handler = serverlessExpress({ app });
-
 exports.handler = async (event, context) => {
   // Para CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -61,16 +56,65 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const result = await handler(event, context);
-    return result;
+    // Simular una solicitud Express para Netlify
+    const req = {
+      method: event.httpMethod,
+      url: event.path,
+      headers: event.headers || {},
+      body: event.body,
+      query: event.queryStringParameters || {}
+    };
+
+    // Crear un objeto response simulado
+    let statusCode = 200;
+    let headers = {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+    };
+    let body = '';
+
+    const res = {
+      status: (code) => {
+        statusCode = code;
+        return res;
+      },
+      json: (data) => {
+        body = JSON.stringify(data);
+      },
+      send: (data) => {
+        body = data;
+      },
+      setHeader: (name, value) => {
+        headers[name] = value;
+      }
+    };
+
+    // Procesar la solicitud con Express
+    await new Promise((resolve, reject) => {
+      app(req, res);
+      // Dar tiempo para que se procese la respuesta
+      setTimeout(resolve, 100);
+    });
+
+    return {
+      statusCode,
+      headers,
+      body
+    };
   } catch (error) {
+    console.error('Error en Netlify Function:', error);
     return {
       statusCode: 500,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
       },
-      body: JSON.stringify({ error: 'Internal server error' })
+      body: JSON.stringify({ 
+        error: 'Internal server error',
+        details: error.message 
+      })
     };
   }
 };

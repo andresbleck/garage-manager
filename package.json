@@ -7,7 +7,6 @@
     "dev": "concurrently \"cd api && npm run dev\" \"cd frontend && npm run dev\""
   },
   "dependencies": {
-    "aws-serverless-express": "^3.4.0",
     "better-sqlite3": "^12.8.0",
     "concurrently": "^8.2.2",
     "cors": "^2.8.6",
