@@ -1,70 +1,138 @@
-# Getting Started with Create React App
+# GarageManager
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Aplicación web full-stack para gestión de vehículos doméstica.
 
-## Available Scripts
+## Características
 
-In the project directory, you can run:
+- Gestión completa de vehículos (CRUD)
+- Control de vencimientos (Seguro, VTV, Matafuegos, y otros personalizados)
+- Historial de reparaciones con tipos predefinidos y opción "Otro"
+- Indicadores visuales de vencimientos próximos y vencidos
+- Interfaz moderna y responsiva con Tailwind CSS
 
-### `npm start`
+## Stack Tecnológico
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Frontend**: React (Vite) + React Router + Axios + Tailwind CSS
+- **Backend**: Node.js + Express
+- **Base de datos**: SQLite con better-sqlite3
+- **Deploy**: Vercel (Serverless Functions)
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Estructura del Proyecto
 
-### `npm test`
+```
+garage-manager/
+  frontend/                 # Aplicación React
+    src/
+      pages/               # Páginas principales
+      components/          # Componentes reutilizables
+  api/                     # Backend para Vercel
+    db/                   # Base de datos SQLite
+    routes/               # Rutas de la API
+  vercel.json             # Configuración de Vercel
+  package.json            # Scripts de build
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Desarrollo Local
 
-### `npm run build`
+### Prerrequisitos
+- Node.js 18+
+- npm
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Instalación
+```bash
+# Clonar el repositorio
+git clone <repository-url>
+cd garage-manager
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+# Instalar dependencias principales
+npm install
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+# Instalar dependencias del backend
+cd api && npm install
 
-### `npm run eject`
+# Instalar dependencias del frontend
+cd ../frontend && npm install
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### Ejecutar en Desarrollo
+```bash
+# Desde la raíz del proyecto
+npm run dev
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Esto iniciará:
+- Backend en http://localhost:3001
+- Frontend en http://localhost:5173
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Deploy en Vercel
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### Paso 1: Preparar el Repositorio
+```bash
+# Subir el código a GitHub
+git add .
+git commit -m "Ready for Vercel deploy"
+git push origin main
+```
 
-## Learn More
+### Paso 2: Deploy en Vercel
+1. Ve a [vercel.com](https://vercel.com)
+2. Conecta tu cuenta de GitHub
+3. Importa el repositorio `garage-manager`
+4. Vercel detectará automáticamente la configuración
+5. Haz clic en "Deploy"
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Paso 3: Variables de Entorno (Opcional)
+Si necesitas configurar variables de entorno, agrégas en el dashboard de Vercel:
+- `NODE_ENV`: `production`
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Funcionalidades
 
-### Code Splitting
+### Gestión de Vehículos
+- Agregar, editar y eliminar vehículos
+- Validación de patentes únicas
+- Soporte para fotos de vehículos
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Vencimientos
+- Tipos predefinidos: Seguro, VTV, Matafuegos
+- Opción "Otro" con campo personalizado (ej: "Cédula verde")
+- Indicadores visuales de estado (OK/Próximo/Vencido)
+- Alertas automáticas para vencimientos próximos (< 30 días)
 
-### Analyzing the Bundle Size
+### Reparaciones
+- Tipos predefinidos: Cambio de batería, aceite, ruedas, aire acondicionado
+- Opción "Otro" con campo personalizado (ej: "Bujías")
+- Registro de costo y kilometraje
+- Historial cronológico completo
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## API Endpoints
 
-### Making a Progressive Web App
+### Vehículos
+- `GET /api/vehicles` - Listar todos
+- `POST /api/vehicles` - Crear nuevo
+- `GET /api/vehicles/:id` - Obtener uno
+- `PUT /api/vehicles/:id` - Editar
+- `DELETE /api/vehicles/:id` - Eliminar
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### Vencimientos
+- `GET /api/vehicles/:id/expirations` - Listar por vehículo
+- `POST /api/vehicles/:id/expirations` - Agregar
+- `PUT /api/expirations/:id` - Editar
+- `DELETE /api/expirations/:id` - Eliminar
 
-### Advanced Configuration
+### Reparaciones
+- `GET /api/vehicles/:id/repairs` - Listar por vehículo
+- `POST /api/vehicles/:id/repairs` - Agregar
+- `PUT /api/repairs/:id` - Editar
+- `DELETE /api/repairs/:id` - Eliminar
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Contribuir
 
-### Deployment
+1. Fork el proyecto
+2. Crea una feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit tus cambios (`git commit -m 'Add amazing feature'`)
+4. Push al branch (`git push origin feature/amazing-feature`)
+5. Abrir un Pull Request
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## Licencia
 
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+MIT License - ver archivo LICENSE para detalles
