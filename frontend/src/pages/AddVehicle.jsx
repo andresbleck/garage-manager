@@ -24,7 +24,7 @@ const AddVehicle = () => {
 
   const fetchVehicle = async () => {
     try {
-      const response = await api.get(`/vehicles/${id}`);
+      const response = await api.get(`/api/vehicles/${id}`);
       setFormData({
         marca: response.data.marca,
         modelo: response.data.modelo,
@@ -58,9 +58,9 @@ const AddVehicle = () => {
       };
 
       if (isEditing) {
-        await api.put(`/vehicles/${id}`, vehicleData);
+        await api.put(`/api/vehicles/${id}`, vehicleData);
       } else {
-        await api.post('/vehicles', vehicleData);
+        await api.post('/api/vehicles', vehicleData);
       }
       
       navigate('/');

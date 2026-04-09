@@ -14,7 +14,7 @@ const Home = () => {
 
   const fetchVehicles = async () => {
     try {
-      const response = await api.get('/vehicles');
+      const response = await api.get('/api/vehicles');
       setVehicles(response.data);
     } catch (err) {
       setError('Error al cargar los vehículos');
@@ -27,7 +27,7 @@ const Home = () => {
   const handleDeleteVehicle = async (vehicleId) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este vehículo?')) {
       try {
-        await api.delete(`/vehicles/${vehicleId}`);
+        await api.delete(`/api/vehicles/${vehicleId}`);
         setVehicles(vehicles.filter(v => v.id !== vehicleId));
       } catch (err) {
         setError('Error al eliminar el vehículo');

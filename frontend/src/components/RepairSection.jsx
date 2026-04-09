@@ -22,7 +22,7 @@ const RepairSection = ({ vehicleId }) => {
 
   const fetchRepairs = async () => {
     try {
-      const response = await api.get(`/vehicles/${vehicleId}/repairs`);
+      const response = await api.get(`/api/vehicles/${vehicleId}/repairs`);
       setRepairs(response.data);
     } catch (error) {
       console.error('Error fetching repairs:', error);
@@ -43,9 +43,9 @@ const RepairSection = ({ vehicleId }) => {
       };
 
       if (editingRepair) {
-        await api.put(`/repairs/${editingRepair.id}`, repairData);
+        await api.put(`/api/repairs/${editingRepair.id}`, repairData);
       } else {
-        await api.post(`/vehicles/${vehicleId}/repairs`, repairData);
+        await api.post(`/api/vehicles/${vehicleId}/repairs`, repairData);
       }
       
       fetchRepairs();
@@ -72,7 +72,7 @@ const RepairSection = ({ vehicleId }) => {
   const handleDelete = async (repairId) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar esta reparación?')) {
       try {
-        await api.delete(`/repairs/${repairId}`);
+        await api.delete(`/api/repairs/${repairId}`);
         setRepairs(repairs.filter(r => r.id !== repairId));
       } catch (err) {
         setError('Error al eliminar la reparación');

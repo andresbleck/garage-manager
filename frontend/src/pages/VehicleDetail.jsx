@@ -17,7 +17,7 @@ const VehicleDetail = () => {
 
   const fetchVehicle = async () => {
     try {
-      const response = await api.get(`/vehicles/${id}`);
+      const response = await api.get(`/api/vehicles/${id}`);
       setVehicle(response.data);
     } catch (err) {
       setError('Error al cargar el vehículo');

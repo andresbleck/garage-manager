@@ -43,28 +43,59 @@ module.exports = app;
 
 // Handler para Netlify Functions
 exports.handler = async (event, context) => {
-  const result = await new Promise((resolve, reject) => {
-    const req = {
-      method: event.httpMethod,
-      url: event.path,
-      headers: event.headers,
-      body: event.body,
-      query: event.queryStringParameters
-    };
-    
-    const res = {
+  // Para CORS preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return {
       statusCode: 200,
       headers: {
-        'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
-      },
-      body: ''
+      }
     };
+  }
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const req = {
+        method: event.httpMethod,
+        url: event.path,
+        headers: event.headers,
+        body: event.body,
+        query: event.queryStringParameters
+      };
+      
+      const res = {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+        },
+        body: '',
+        json: (data) => {
+          res.body = JSON.stringify(data);
+          resolve(res);
+        },
+        status: (code) => {
+          res.statusCode = code;
+          return res;
+        }
+      };
+      
+      app(req, res);
+    });
     
-    app(req, res);
-  });
-  
-  return result;
+    return result;
+  } catch (error) {
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({ error: 'Internal server error' })
+    };
+  }
 };

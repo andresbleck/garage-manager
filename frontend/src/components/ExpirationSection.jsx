@@ -20,7 +20,7 @@ const ExpirationSection = ({ vehicleId }) => {
 
   const fetchExpirations = async () => {
     try {
-      const response = await api.get(`/vehicles/${vehicleId}/expirations`);
+      const response = await api.get(`/api/vehicles/${vehicleId}/expirations`);
       setExpirations(response.data);
     } catch (error) {
       console.error('Error fetching expirations:', error);
@@ -68,9 +68,9 @@ const ExpirationSection = ({ vehicleId }) => {
 
     try {
       if (editingExpiration) {
-        await api.put(`/expirations/${editingExpiration.id}`, formData);
+        await api.put(`/api/expirations/${editingExpiration.id}`, formData);
       } else {
-        await api.post(`/vehicles/${vehicleId}/expirations`, formData);
+        await api.post(`/api/vehicles/${vehicleId}/expirations`, formData);
       }
       
       fetchExpirations();
@@ -95,7 +95,7 @@ const ExpirationSection = ({ vehicleId }) => {
   const handleDelete = async (expirationId) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este vencimiento?')) {
       try {
-        await api.delete(`/expirations/${expirationId}`);
+        await api.delete(`/api/expirations/${expirationId}`);
         setExpirations(expirations.filter(e => e.id !== expirationId));
       } catch (err) {
         setError('Error al eliminar el vencimiento');

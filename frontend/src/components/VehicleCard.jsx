@@ -12,7 +12,7 @@ const VehicleCard = ({ vehicle, onDelete }) => {
 
   const fetchExpirations = async () => {
     try {
-      const response = await api.get(`/vehicles/${vehicle.id}/expirations`);
+      const response = await api.get(`/api/vehicles/${vehicle.id}/expirations`);
       setExpirations(response.data);
     } catch (error) {
       console.error('Error fetching expirations:', error);
