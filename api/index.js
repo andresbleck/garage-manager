@@ -42,6 +42,11 @@ if (process.env.NODE_ENV !== 'production') {
 module.exports = app;
 
 // Handler para Netlify Functions
+const serverlessExpress = require('aws-serverless-express');
+
+// Crear el handler para Netlify
+const handler = serverlessExpress({ app });
+
 exports.handler = async (event, context) => {
   // Para CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -56,37 +61,7 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const result = await new Promise((resolve, reject) => {
-      const req = {
-        method: event.httpMethod,
-        url: event.path,
-        headers: event.headers,
-        body: event.body,
-        query: event.queryStringParameters
-      };
-      
-      const res = {
-        statusCode: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
-        },
-        body: '',
-        json: (data) => {
-          res.body = JSON.stringify(data);
-          resolve(res);
-        },
-        status: (code) => {
-          res.statusCode = code;
-          return res;
-        }
-      };
-      
-      app(req, res);
-    });
-    
+    const result = await handler(event, context);
     return result;
   } catch (error) {
     return {
