@@ -3,9 +3,9 @@ const cors = require('cors');
 const db = require('./db/database');
 
 // Importar rutas
-const vehiclesRouter = require('./vehicles');
-const expirationsRouter = require('./expirations');
-const repairsRouter = require('./repairs');
+const vehiclesRouter = require('./routes/vehicles');
+const expirationsRouter = require('./routes/expirations');
+const repairsRouter = require('./routes/repairs');
 
 const app = express();
 
@@ -13,10 +13,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Rutas API - Sin prefijo /api para Netlify Functions
-app.use('/', vehiclesRouter);
-app.use('/', expirationsRouter);
-app.use('/', repairsRouter);
+// Rutas API
+app.use('/api/vehicles', vehiclesRouter);
+app.use('/api', expirationsRouter);
+app.use('/api', repairsRouter);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
@@ -38,4 +38,5 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
+// Exportar para Vercel
 module.exports = app;
