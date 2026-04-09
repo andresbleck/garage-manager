@@ -15,7 +15,7 @@ Aplicación web full-stack para gestión de vehículos doméstica.
 - **Frontend**: React (Vite) + React Router + Axios + Tailwind CSS
 - **Backend**: Node.js + Express
 - **Base de datos**: SQLite con better-sqlite3
-- **Deploy**: Vercel (Serverless Functions)
+- **Deploy**: Netlify (Serverless Functions)
 
 ## Estructura del Proyecto
 
@@ -25,10 +25,10 @@ garage-manager/
     src/
       pages/               # Páginas principales
       components/          # Componentes reutilizables
-  api/                     # Backend para Vercel
+  api/                     # Backend para Netlify Functions
     db/                   # Base de datos SQLite
     routes/               # Rutas de la API
-  vercel.json             # Configuración de Vercel
+  netlify.toml            # Configuración de Netlify
   package.json            # Scripts de build
 ```
 
@@ -64,25 +64,31 @@ Esto iniciará:
 - Backend en http://localhost:3001
 - Frontend en http://localhost:5173
 
-## Deploy en Vercel
+## Deploy en Netlify
 
 ### Paso 1: Preparar el Repositorio
 ```bash
 # Subir el código a GitHub
 git add .
-git commit -m "Ready for Vercel deploy"
+git commit -m "Ready for Netlify deploy"
 git push origin main
 ```
 
-### Paso 2: Deploy en Vercel
-1. Ve a [vercel.com](https://vercel.com)
+### Paso 2: Deploy en Netlify
+1. Ve a [netlify.com](https://netlify.com)
 2. Conecta tu cuenta de GitHub
-3. Importa el repositorio `garage-manager`
-4. Vercel detectará automáticamente la configuración
-5. Haz clic en "Deploy"
+3. Importa el repositorio `GarageManager`
+4. Netlify detectará automáticamente la configuración desde `netlify.toml`
+5. Haz clic en "Deploy site"
 
-### Paso 3: Variables de Entorno (Opcional)
-Si necesitas configurar variables de entorno, agrégas en el dashboard de Vercel:
+### Paso 3: Configuración Adicional
+Netlify configurará automáticamente:
+- Build command: `cd frontend && npm install && npm run build`
+- Publish directory: `frontend/dist`
+- Functions directory: `api`
+
+### Paso 4: Variables de Entorno (Opcional)
+Si necesitas configurar variables de entorno, agrégas en el dashboard de Netlify:
 - `NODE_ENV`: `production`
 
 ## Funcionalidades

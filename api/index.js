@@ -38,5 +38,33 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// Exportar para Vercel
+// Exportar para Netlify Functions
 module.exports = app;
+
+// Handler para Netlify Functions
+exports.handler = async (event, context) => {
+  const result = await new Promise((resolve, reject) => {
+    const req = {
+      method: event.httpMethod,
+      url: event.path,
+      headers: event.headers,
+      body: event.body,
+      query: event.queryStringParameters
+    };
+    
+    const res = {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+      },
+      body: ''
+    };
+    
+    app(req, res);
+  });
+  
+  return result;
+};
