@@ -8,7 +8,7 @@ const expirationsRoutes = require('./routes/expirations');
 const repairsRoutes = require('./routes/repairs');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());

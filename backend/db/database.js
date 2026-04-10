@@ -47,7 +47,19 @@ function inicializarBaseDeDatos() {
     )
   `);
 
+  migrateColumn('expirations', 'tipo_personalizado', 'TEXT');
+  migrateColumn('repairs', 'tipo_personalizado', 'TEXT');
+
   console.log('Base de datos inicializada correctamente');
+}
+
+function migrateColumn(table, column, type) {
+  const columnInfo = db.prepare(`PRAGMA table_info(${table})`).all();
+  const exists = columnInfo.some((col) => col.name === column);
+  if (!exists) {
+    console.log(`Migrando tabla ${table}: agregando columna ${column}`);
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
 }
 
 // Inicializar la base de datos
