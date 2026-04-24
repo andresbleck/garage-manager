@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import api from '../api';
 import { useState, useEffect } from 'react';
 
-const VehicleCard = ({ vehicle, onDelete }) => {
+const VehicleCard = ({ vehicle, onDelete, insuranceDocsCount = 0 }) => {
   const [expirations, setExpirations] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -72,58 +72,59 @@ const VehicleCard = ({ vehicle, onDelete }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex-1">
-          <h3 className="text-xl font-semibold text-gray-800 mb-1">
-            {vehicle.marca} {vehicle.modelo}
-          </h3>
-          <p className="text-gray-600 font-medium">{vehicle.patente}</p>
-          <p className="text-gray-500 text-sm">Año {vehicle.año}</p>
-        </div>
-        {getExpirationBadge()}
-      </div>
+    <div className="group overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md max-w-[450px] w-full mx-auto">
+      <div className="space-y-5 p-6">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h3 className="truncate text-2xl font-semibold text-slate-900">
+              {vehicle.marca} {vehicle.modelo}
+            </h3>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <p className="truncate text-2xl font-semibold text-slate-900">
+                {vehicle.patente}
+              </p>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
+                Año {vehicle.año}
+              </span>
+            </div>
+          </div>
 
-      {vehicle.foto_url && (
-        <div className="mb-4">
-          <img
-            src={vehicle.foto_url}
-            alt={`${vehicle.marca} ${vehicle.modelo}`}
-            className="w-full h-40 object-cover rounded-lg"
-          />
+          <div className="flex flex-col items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-center sm:w-28">
+            <p className="text-[9px] uppercase tracking-[0.22em] text-slate-400">Documentos</p>
+            <p className="text-xl font-semibold text-slate-900">{insuranceDocsCount}</p>
+            <p className="text-[10px] text-slate-500">archivo{insuranceDocsCount === 1 ? '' : 's'}</p>
+          </div>
         </div>
-      )}
 
-      <div className="flex justify-between items-center">
-        <Link
-          to={`/vehicle/${vehicle.id}`}
-          className="text-blue-600 hover:text-blue-800 font-medium"
-        >
-          Ver detalles
-        </Link>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Link
-            to={`/edit-vehicle/${vehicle.id}`}
-            className="bg-gray-200 text-gray-700 px-3 py-1 rounded hover:bg-gray-300 transition-colors text-sm"
+            to={`/vehicle/${vehicle.id}`}
+            className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
           >
-            Editar
+            Ver detalles
           </Link>
-          <button
-            onClick={() => onDelete(vehicle.id)}
-            className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-colors text-sm"
-          >
-            Eliminar
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to={`/edit-vehicle/${vehicle.id}`}
+              className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Editar
+            </Link>
+            <button
+              onClick={() => onDelete(vehicle.id)}
+              className="inline-flex items-center justify-center rounded-full bg-rose-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-600"
+            >
+              Eliminar
+            </button>
+          </div>
         </div>
-      </div>
 
-      {hasNearExpiration() && (
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-          <p className="text-yellow-800 text-sm font-medium">
-            ⚠️ Hay vencimientos próximos o vencidos
-          </p>
-        </div>
-      )}
+        {hasNearExpiration() && (
+          <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 shadow-sm">
+            <p className="font-medium">⚠️ Hay vencimientos próximos o vencidos</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

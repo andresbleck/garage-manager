@@ -6,6 +6,7 @@ const db = require('./db/database');
 const vehiclesRoutes = require('./routes/vehicles');
 const expirationsRoutes = require('./routes/expirations');
 const repairsRoutes = require('./routes/repairs');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -15,6 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 // Rutas API
+app.use('/api/auth', authRoutes);
 app.use('/api/vehicles', vehiclesRoutes);
 app.use('/api', expirationsRoutes);
 app.use('/api', repairsRoutes);

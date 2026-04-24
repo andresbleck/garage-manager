@@ -1,11 +1,28 @@
 const express = require('express');
 const db = require('../db/database');
+const auth = require('../middleware/auth');
 const router = express.Router();
 
-// GET /api/vehicles - Listar todos los vehículos
+router.use(auth);
+
+function requireFamilyId(req, res) {
+  const familyId = req.user?.familyId;
+  if (!familyId) {
+    res.status(401).json({ error: 'No autorizado' });
+    return null;
+  }
+  return familyId;
+}
+
+// GET /api/vehicles - Listar vehículos de la familia
 router.get('/', (req, res) => {
   try {
-    const vehicles = db.prepare('SELECT * FROM vehicles ORDER BY marca, modelo').all();
+    const familyId = requireFamilyId(req, res);
+    if (!familyId) return;
+
+    const vehicles = db
+      .prepare('SELECT * FROM vehicles WHERE family_id = ? ORDER BY marca, modelo')
+      .all(familyId);
     res.json(vehicles);
   } catch (error) {
     console.error('Error al obtener vehículos:', error);
@@ -16,7 +33,13 @@ router.get('/', (req, res) => {
 // GET /api/vehicles/:id - Obtener un vehículo específico
 router.get('/:id', (req, res) => {
   try {
-    const vehicle = db.prepare('SELECT * FROM vehicles WHERE id = ?').get(req.params.id);
+    const familyId = requireFamilyId(req, res);
+    if (!familyId) return;
+
+    const vehicle = db
+      .prepare('SELECT * FROM vehicles WHERE id = ? AND family_id = ?')
+      .get(req.params.id, familyId);
+
     if (!vehicle) {
       return res.status(404).json({ error: 'Vehículo no encontrado' });
     }
@@ -31,25 +54,27 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
   try {
     const { marca, modelo, patente, año, foto_url } = req.body;
-    
-    // Validaciones básicas
+
     if (!marca || !modelo || !patente || !año) {
       return res.status(400).json({ error: 'Todos los campos obligatorios son requeridos' });
     }
 
-    // Verificar que la patente no exista
-    const existingVehicle = db.prepare('SELECT id FROM vehicles WHERE patente = ?').get(patente);
+    const familyId = requireFamilyId(req, res);
+    if (!familyId) return;
+
+    const existingVehicle = db
+      .prepare('SELECT id FROM vehicles WHERE patente = ? AND family_id = ?')
+      .get(patente, familyId);
     if (existingVehicle) {
-      return res.status(400).json({ error: 'La patente ya existe' });
+      return res.status(400).json({ error: 'La patente ya existe en tu familia' });
     }
 
     const stmt = db.prepare(`
-      INSERT INTO vehicles (marca, modelo, patente, año, foto_url)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO vehicles (marca, modelo, patente, año, foto_url, family_id)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
-    
-    const result = stmt.run(marca, modelo, patente, año, foto_url || null);
-    
+
+    const result = stmt.run(marca, modelo, patente, año, foto_url || null, familyId);
     const newVehicle = db.prepare('SELECT * FROM vehicles WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(newVehicle);
   } catch (error) {
@@ -63,36 +88,40 @@ router.put('/:id', (req, res) => {
   try {
     const { marca, modelo, patente, año, foto_url } = req.body;
     const vehicleId = req.params.id;
-    
-    // Validaciones básicas
+
     if (!marca || !modelo || !patente || !año) {
       return res.status(400).json({ error: 'Todos los campos obligatorios son requeridos' });
     }
 
-    // Verificar que el vehículo exista
-    const existingVehicle = db.prepare('SELECT id FROM vehicles WHERE id = ?').get(vehicleId);
+    const familyId = requireFamilyId(req, res);
+    if (!familyId) return;
+
+    const existingVehicle = db
+      .prepare('SELECT id FROM vehicles WHERE id = ? AND family_id = ?')
+      .get(vehicleId, familyId);
     if (!existingVehicle) {
       return res.status(404).json({ error: 'Vehículo no encontrado' });
     }
 
-    // Verificar que la patente no exista en otro vehículo
-    const patenteCheck = db.prepare('SELECT id FROM vehicles WHERE patente = ? AND id != ?').get(patente, vehicleId);
+    const patenteCheck = db
+      .prepare('SELECT id FROM vehicles WHERE patente = ? AND id != ? AND family_id = ?')
+      .get(patente, vehicleId, familyId);
     if (patenteCheck) {
-      return res.status(400).json({ error: 'La patente ya existe en otro vehículo' });
+      return res.status(400).json({ error: 'La patente ya existe en tu familia' });
     }
 
     const stmt = db.prepare(`
       UPDATE vehicles 
       SET marca = ?, modelo = ?, patente = ?, año = ?, foto_url = ?
-      WHERE id = ?
+      WHERE id = ? AND family_id = ?
     `);
-    
-    const result = stmt.run(marca, modelo, patente, año, foto_url || null, vehicleId);
-    
+
+    const result = stmt.run(marca, modelo, patente, año, foto_url || null, vehicleId, familyId);
+
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Vehículo no encontrado' });
     }
-    
+
     const updatedVehicle = db.prepare('SELECT * FROM vehicles WHERE id = ?').get(vehicleId);
     res.json(updatedVehicle);
   } catch (error) {
@@ -105,20 +134,24 @@ router.put('/:id', (req, res) => {
 router.delete('/:id', (req, res) => {
   try {
     const vehicleId = req.params.id;
-    
-    // Verificar que el vehículo exista
-    const existingVehicle = db.prepare('SELECT id FROM vehicles WHERE id = ?').get(vehicleId);
+
+    const familyId = requireFamilyId(req, res);
+    if (!familyId) return;
+
+    const existingVehicle = db
+      .prepare('SELECT id FROM vehicles WHERE id = ? AND family_id = ?')
+      .get(vehicleId, familyId);
     if (!existingVehicle) {
       return res.status(404).json({ error: 'Vehículo no encontrado' });
     }
 
-    const stmt = db.prepare('DELETE FROM vehicles WHERE id = ?');
-    const result = stmt.run(vehicleId);
-    
+    const stmt = db.prepare('DELETE FROM vehicles WHERE id = ? AND family_id = ?');
+    const result = stmt.run(vehicleId, familyId);
+
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Vehículo no encontrado' });
     }
-    
+
     res.json({ message: 'Vehículo eliminado correctamente' });
   } catch (error) {
     console.error('Error al eliminar vehículo:', error);

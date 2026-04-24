@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import ExpirationSection from '../components/ExpirationSection';
 import RepairSection from '../components/RepairSection';
@@ -63,13 +63,19 @@ const VehicleDetail = () => {
               <p className="text-gray-500">Año {vehicle.año}</p>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => navigate(`/edit-vehicle/${vehicle.id}`)}
                 className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
               >
                 Editar
               </button>
+              <Link
+                to="/seguros"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Ver seguros
+              </Link>
             </div>
           </div>
 
