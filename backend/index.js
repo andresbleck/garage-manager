@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: ['https://garage-manager-five.vercel.app', 'http://localhost:5173', 'https://garage-manager-api.onrender.com'],
+  origin: ['https://garage-manager-five.vercel.app', 'http://localhost:5173', 'https://garage-manager-1.onrender.com'],
   credentials: true
 }));
 app.use(express.json());
