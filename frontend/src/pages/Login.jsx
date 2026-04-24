@@ -34,6 +34,7 @@ const Login = () => {
     <div className="max-w-md mx-auto bg-white shadow-xl rounded-3xl p-8 mt-12 border border-slate-200">
       <h2 className="text-3xl font-semibold text-slate-900 mb-2">Iniciar sesión</h2>
       <p className="text-slate-600 mb-6">Ingresa con la cuenta familiar para acceder al tablero compartido.</p>
+      <p className="text-slate-600 mb-6">Usuario prueba: admingarage@gmail.com | Contraseña: GarageManager</p>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <label className="block text-slate-700">
