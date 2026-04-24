@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import api from '../api';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 const VehicleCard = ({ vehicle, onDelete, insuranceDocsCount = 0 }) => {
+  const { isAuthenticated } = useAuth();
   const [expirations, setExpirations] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -103,20 +105,22 @@ const VehicleCard = ({ vehicle, onDelete, insuranceDocsCount = 0 }) => {
           >
             Ver detalles
           </Link>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              to={`/edit-vehicle/${vehicle.id}`}
-              className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Editar
-            </Link>
-            <button
-              onClick={() => onDelete(vehicle.id)}
-              className="inline-flex items-center justify-center rounded-full bg-rose-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-600"
-            >
-              Eliminar
-            </button>
-          </div>
+          {isAuthenticated && (
+            <div className="flex flex-wrap gap-2">
+              <Link
+                to={`/edit-vehicle/${vehicle.id}`}
+                className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Editar
+              </Link>
+              <button
+                onClick={() => onDelete(vehicle.id)}
+                className="inline-flex items-center justify-center rounded-full bg-rose-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-600"
+              >
+                Eliminar
+              </button>
+            </div>
+          )}
         </div>
 
         {hasNearExpiration() && (

@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { loadInsuranceDocs } from '../utils/insuranceStorage';
 
 const Home = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [vehicles, setVehicles] = useState([]);
   const [docsByVehicle, setDocsByVehicle] = useState({});
   const [loading, setLoading] = useState(true);
@@ -64,6 +64,33 @@ const Home = () => {
     return (
       <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
         {error}
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="text-center py-12">
+        <div className="max-w-md mx-auto">
+          <h2 className="text-3xl font-semibold text-slate-900 mb-4">Bienvenido a GarageManager</h2>
+          <p className="text-slate-600 mb-8">
+            Para agregar y gestionar vehículos, necesitas iniciar sesión o crear una cuenta.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition-colors"
+            >
+              Iniciar Sesión
+            </Link>
+            <Link
+              to="/register"
+              className="inline-flex items-center justify-center bg-slate-600 text-white px-6 py-3 rounded-full hover:bg-slate-700 transition-colors"
+            >
+              Crear Cuenta
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
