@@ -38,6 +38,9 @@ app.listen(PORT, () => {
   console.log(`API disponible en http://localhost:${PORT}`);
 });
 
+// Exportar para testing
+module.exports = app;
+
 // Cerrar conexión a la base de datos al cerrar el servidor
 process.on('SIGINT', () => {
   console.log('\nCerrando servidor...');
