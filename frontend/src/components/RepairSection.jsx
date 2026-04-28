@@ -78,7 +78,7 @@ const RepairSection = ({ vehicleId }) => {
       try {
         await api.delete(`/api/repairs/${repairId}`);
         setRepairs(repairs.filter(r => r.id !== repairId));
-        toast.error('Reparación eliminada correctamente');
+        toast.success('Reparación eliminada correctamente');
       } catch (err) {
         setError('Error al eliminar la reparación');
         toast.error('No se pudo eliminar la reparación');

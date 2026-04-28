@@ -97,7 +97,7 @@ const ExpirationSection = ({ vehicleId }) => {
       try {
         await api.delete(`/api/expirations/${expirationId}`);
         setExpirations(expirations.filter(e => e.id !== expirationId));
-        toast.error('Vencimiento eliminado correctamente');
+        toast.success('Vencimiento eliminado correctamente');
       } catch (err) {
         setError('Error al eliminar el vencimiento');
         toast.error('No se pudo eliminar el vencimiento');

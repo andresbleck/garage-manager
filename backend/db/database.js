@@ -1,5 +1,6 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const crypto = require('crypto');
 
 // Crear la base de datos en la carpeta db
 const dbPath = path.join(__dirname, 'garage.db');
@@ -82,6 +83,11 @@ function inicializarBaseDeDatos() {
   migrateColumn('expirations', 'tipo_personalizado', 'TEXT');
   migrateColumn('repairs', 'tipo_personalizado', 'TEXT');
 
+  migrateExpirationsFK();
+  migrateRepairsFK();
+
+  ensureTestUser();
+
   console.log('Base de datos inicializada correctamente');
 }
 
@@ -90,7 +96,8 @@ function migrateVehiclesPatenteIndex() {
   const hasGlobalPatenteIndex = indexes.some((index) => {
     if (!index.unique) return false;
     const info = db.prepare(`PRAGMA index_info(${index.name})`).all();
-    return info.some((col) => col.name === 'patente');
+    // Solo migrar si es un índice de una sola columna sobre 'patente' (el antiguo estilo)
+    return info.length === 1 && info[0].name === 'patente';
   });
 
   if (!hasGlobalPatenteIndex) {
@@ -130,6 +137,85 @@ function ensureDefaultFamily() {
   }
 }
 
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function ensureTestUser() {
+  const testEmail = 'admingarage@gmail.com';
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(testEmail);
+  if (existing) return;
+
+  let family = db.prepare("SELECT id FROM families WHERE name = 'Demo'").get();
+  if (!family) {
+    const result = db
+      .prepare('INSERT INTO families (name, created_at) VALUES (?, ?)')
+      .run('Demo', new Date().toISOString());
+    family = { id: result.lastInsertRowid };
+  }
+
+  const passwordHash = hashPassword('GarageManager');
+  db.prepare(
+    'INSERT INTO users (family_id, email, password_hash, display_name, role, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(family.id, testEmail, passwordHash, 'Admin Demo', 'admin', new Date().toISOString());
+
+  console.log('Usuario de prueba creado: admingarage@gmail.com');
+}
+
+function migrateExpirationsFK() {
+  const schema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='expirations'").get();
+  if (!schema || !schema.sql.includes('vehicles_old')) return;
+
+  console.log('Migrando FK de expirations: apuntando a vehicles...');
+  db.exec('ALTER TABLE expirations RENAME TO expirations_old');
+  db.exec(`
+    CREATE TABLE expirations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vehicle_id INTEGER NOT NULL,
+      tipo TEXT NOT NULL CHECK (tipo IN ('seguro', 'vtv', 'matafuegos', 'otro')),
+      tipo_personalizado TEXT,
+      fecha_vencimiento TEXT NOT NULL,
+      observaciones TEXT,
+      FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
+    )
+  `);
+  db.exec(`
+    INSERT INTO expirations (id, vehicle_id, tipo, tipo_personalizado, fecha_vencimiento, observaciones)
+    SELECT id, vehicle_id, tipo, tipo_personalizado, fecha_vencimiento, observaciones FROM expirations_old
+  `);
+  db.exec('DROP TABLE expirations_old');
+  console.log('Migración expirations FK completada');
+}
+
+function migrateRepairsFK() {
+  const schema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='repairs'").get();
+  if (!schema || !schema.sql.includes('vehicles_old')) return;
+
+  console.log('Migrando FK de repairs: apuntando a vehicles...');
+  db.exec('ALTER TABLE repairs RENAME TO repairs_old');
+  db.exec(`
+    CREATE TABLE repairs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vehicle_id INTEGER NOT NULL,
+      tipo TEXT NOT NULL CHECK (tipo IN ('cambio_bateria', 'cambio_aceite', 'cambio_ruedas', 'aire_acondicionado', 'otro')),
+      tipo_personalizado TEXT,
+      descripcion TEXT NOT NULL,
+      fecha TEXT NOT NULL,
+      costo REAL,
+      kilometraje INTEGER,
+      FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
+    )
+  `);
+  db.exec(`
+    INSERT INTO repairs (id, vehicle_id, tipo, tipo_personalizado, descripcion, fecha, costo, kilometraje)
+    SELECT id, vehicle_id, tipo, tipo_personalizado, descripcion, fecha, costo, kilometraje FROM repairs_old
+  `);
+  db.exec('DROP TABLE repairs_old');
+  console.log('Migración repairs FK completada');
+}
 
 function migrateColumn(table, column, type) {
   const columnInfo = db.prepare(`PRAGMA table_info(${table})`).all();

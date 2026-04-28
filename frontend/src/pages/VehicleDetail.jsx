@@ -48,31 +48,31 @@ const VehicleDetail = () => {
       <div className="mb-6">
         <button
           onClick={() => navigate('/')}
-          className="mb-4 text-blue-600 hover:text-blue-800 font-medium"
+          className="mb-4 text-blue-600 hover:text-blue-800 font-medium text-sm"
         >
           ← Volver a vehículos
         </button>
-        
-        <div className="bg-white shadow-md rounded-lg p-6">
-          <div className="flex justify-between items-start">
+
+        <div className="bg-white shadow-2xl rounded-3xl p-6 border border-slate-200">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">
+              <h2 className="text-3xl font-semibold text-slate-900 mb-1">
                 {vehicle.marca} {vehicle.modelo}
               </h2>
-              <p className="text-xl text-gray-600 mb-1">{vehicle.patente}</p>
-              <p className="text-gray-500">Año {vehicle.año}</p>
+              <p className="text-lg text-slate-600 mb-1">{vehicle.patente}</p>
+              <p className="text-slate-500 text-sm">Año {vehicle.año}</p>
             </div>
-            
+
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => navigate(`/edit-vehicle/${vehicle.id}`)}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                className="px-4 py-2 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors text-sm"
               >
                 Editar
               </button>
               <Link
                 to="/seguros"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm"
               >
                 Ver seguros
               </Link>
@@ -84,7 +84,7 @@ const VehicleDetail = () => {
               <img
                 src={vehicle.foto_url}
                 alt={`${vehicle.marca} ${vehicle.modelo}`}
-                className="w-full h-64 object-cover rounded-lg"
+                className="w-full h-64 object-cover rounded-2xl"
                 onError={(e) => {
                   e.target.style.display = 'none';
                 }}

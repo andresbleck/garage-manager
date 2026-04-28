@@ -7,15 +7,20 @@ import { useAuth } from '../context/AuthContext';
 import { loadInsuranceDocs } from '../utils/insuranceStorage';
 
 const Home = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, initialized } = useAuth();
   const [vehicles, setVehicles] = useState([]);
   const [docsByVehicle, setDocsByVehicle] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (!initialized) return;
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
     fetchVehicles();
-  }, []);
+  }, [initialized, isAuthenticated]);
 
   useEffect(() => {
     if (user?.familyId) {
@@ -41,7 +46,7 @@ const Home = () => {
       try {
         await api.delete(`/api/vehicles/${vehicleId}`);
         setVehicles(vehicles.filter(v => v.id !== vehicleId));
-        toast.error('Vehículo eliminado correctamente');
+        toast.success('Vehículo eliminado correctamente');
       } catch (err) {
         setError('Error al eliminar el vehículo');
         toast.error('No se pudo eliminar el vehículo');
@@ -50,20 +55,12 @@ const Home = () => {
     }
   };
 
-  if (loading) {
+  if (!initialized || loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="rounded-3xl bg-white/90 px-8 py-6 shadow-xl border border-slate-200 text-lg font-medium text-slate-700">
-          Cargando vehículos...
+          Cargando...
         </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
-        {error}
       </div>
     );
   }
@@ -91,6 +88,14 @@ const Home = () => {
             </Link>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+        {error}
       </div>
     );
   }

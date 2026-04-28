@@ -13,7 +13,14 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: ['https://garage-manager-five.vercel.app', 'http://localhost:5173', 'https://garage-manager-1.onrender.com'],
+  origin: (origin, callback) => {
+    const allowed = ['https://garage-manager-five.vercel.app', 'https://garage-manager-1.onrender.com'];
+    if (!origin || allowed.includes(origin) || /^http:\/\/localhost(:\d+)?$/.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS no permitido'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
