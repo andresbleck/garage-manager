@@ -76,6 +76,18 @@ async function inicializarBaseDeDatos() {
     FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
   )`);
 
+  await db.execute(`CREATE TABLE IF NOT EXISTS documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vehicle_id INTEGER NOT NULL,
+    family_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    data TEXT NOT NULL,
+    uploaded_at TEXT NOT NULL,
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE,
+    FOREIGN KEY (family_id) REFERENCES families (id) ON DELETE CASCADE
+  )`);
+
   await migrateColumn('vehicles', 'family_id', 'INTEGER DEFAULT 1');
   await migrateVehiclesPatenteIndex();
   await ensureDefaultFamily();

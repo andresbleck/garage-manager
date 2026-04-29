@@ -5,6 +5,7 @@ const { db, inicializarBaseDeDatos } = require('./db/database');
 const vehiclesRoutes = require('./routes/vehicles');
 const expirationsRoutes = require('./routes/expirations');
 const repairsRoutes = require('./routes/repairs');
+const documentsRoutes = require('./routes/documents');
 const authRoutes = require('./routes/auth');
 
 const app = express();
@@ -21,12 +22,13 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/vehicles', vehiclesRoutes);
 app.use('/api', expirationsRoutes);
 app.use('/api', repairsRoutes);
+app.use('/api', documentsRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'GarageManager API funcionando correctamente' });

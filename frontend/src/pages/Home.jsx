@@ -4,8 +4,6 @@ import { toast } from 'react-toastify';
 import api from '../api';
 import VehicleCard from '../components/VehicleCard';
 import { useAuth } from '../context/AuthContext';
-import { loadInsuranceDocs } from '../utils/insuranceStorage';
-
 const Home = () => {
   const { user, isAuthenticated, initialized } = useAuth();
   const [vehicles, setVehicles] = useState([]);
@@ -22,16 +20,14 @@ const Home = () => {
     fetchVehicles();
   }, [initialized, isAuthenticated]);
 
-  useEffect(() => {
-    if (user?.familyId) {
-      setDocsByVehicle(loadInsuranceDocs(user.familyId));
-    }
-  }, [user, vehicles.length]);
-
   const fetchVehicles = async () => {
     try {
-      const response = await api.get('/api/vehicles');
-      setVehicles(response.data);
+      const [vehiclesRes, countsRes] = await Promise.all([
+        api.get('/api/vehicles'),
+        api.get('/api/documents/counts'),
+      ]);
+      setVehicles(vehiclesRes.data);
+      setDocsByVehicle(countsRes.data);
     } catch (err) {
       setError('Error al cargar los vehículos');
       toast.error('No se pudo cargar la lista de vehículos');
@@ -134,7 +130,7 @@ const Home = () => {
               key={vehicle.id}
               vehicle={vehicle}
               onDelete={handleDeleteVehicle}
-              insuranceDocsCount={(docsByVehicle[vehicle.id] || []).length}
+              insuranceDocsCount={docsByVehicle[vehicle.id] || 0}
             />
           ))}
         </div>
