@@ -1,38 +1,30 @@
 const express = require('express');
-const db = require('../db/database');
+const { queryOne, queryAll, queryRun } = require('../db/database');
 const auth = require('../middleware/auth');
 const router = express.Router();
 
 router.use(auth);
 
-function verifyVehicleFamily(vehicleId, familyId) {
-  return db
-    .prepare('SELECT id FROM vehicles WHERE id = ? AND family_id = ?')
-    .get(vehicleId, familyId);
+async function verifyVehicleFamily(vehicleId, familyId) {
+  return queryOne('SELECT id FROM vehicles WHERE id = ? AND family_id = ?', [vehicleId, familyId]);
 }
 
-function verifyExpirationFamily(expirationId, familyId) {
-  return db
-    .prepare(
-      'SELECT e.id FROM expirations e JOIN vehicles v ON e.vehicle_id = v.id WHERE e.id = ? AND v.family_id = ?'
-    )
-    .get(expirationId, familyId);
+async function verifyExpirationFamily(expirationId, familyId) {
+  return queryOne(
+    'SELECT e.id FROM expirations e JOIN vehicles v ON e.vehicle_id = v.id WHERE e.id = ? AND v.family_id = ?',
+    [expirationId, familyId]
+  );
 }
 
-// GET /api/vehicles/:id/expirations - Listar vencimientos de un vehículo
-router.get('/vehicles/:id/expirations', (req, res) => {
+router.get('/vehicles/:id/expirations', async (req, res) => {
   try {
-    const vehicleId = req.params.id;
-    const vehicle = verifyVehicleFamily(vehicleId, req.user.familyId);
+    const vehicle = await verifyVehicleFamily(req.params.id, req.user.familyId);
+    if (!vehicle) return res.status(404).json({ error: 'Vehículo no encontrado' });
 
-    if (!vehicle) {
-      return res.status(404).json({ error: 'Vehículo no encontrado' });
-    }
-
-    const expirations = db
-      .prepare('SELECT * FROM expirations WHERE vehicle_id = ? ORDER BY fecha_vencimiento ASC')
-      .all(vehicleId);
-
+    const expirations = await queryAll(
+      'SELECT * FROM expirations WHERE vehicle_id = ? ORDER BY fecha_vencimiento ASC',
+      [req.params.id]
+    );
     res.json(expirations);
   } catch (error) {
     console.error('Error al obtener vencimientos:', error);
@@ -40,8 +32,7 @@ router.get('/vehicles/:id/expirations', (req, res) => {
   }
 });
 
-// POST /api/vehicles/:id/expirations - Agregar vencimiento a un vehículo
-router.post('/vehicles/:id/expirations', (req, res) => {
+router.post('/vehicles/:id/expirations', async (req, res) => {
   try {
     const vehicleId = req.params.id;
     const { tipo, tipo_personalizado, fecha_vencimiento, observaciones } = req.body;
@@ -49,28 +40,21 @@ router.post('/vehicles/:id/expirations', (req, res) => {
     if (!tipo || !fecha_vencimiento) {
       return res.status(400).json({ error: 'El tipo y la fecha de vencimiento son obligatorios' });
     }
-
-    const tiposValidos = ['seguro', 'vtv', 'matafuegos', 'otro'];
-    if (!tiposValidos.includes(tipo)) {
+    if (!['seguro', 'vtv', 'matafuegos', 'otro'].includes(tipo)) {
       return res.status(400).json({ error: 'Tipo de vencimiento no válido' });
     }
-
     if (tipo === 'otro' && !tipo_personalizado) {
       return res.status(400).json({ error: 'Cuando el tipo es "Otro", debe especificar el nombre' });
     }
 
-    const vehicle = verifyVehicleFamily(vehicleId, req.user.familyId);
-    if (!vehicle) {
-      return res.status(404).json({ error: 'Vehículo no encontrado' });
-    }
+    const vehicle = await verifyVehicleFamily(vehicleId, req.user.familyId);
+    if (!vehicle) return res.status(404).json({ error: 'Vehículo no encontrado' });
 
-    const stmt = db.prepare(`
-      INSERT INTO expirations (vehicle_id, tipo, tipo_personalizado, fecha_vencimiento, observaciones)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-
-    const result = stmt.run(vehicleId, tipo, tipo_personalizado || null, fecha_vencimiento, observaciones || null);
-    const newExpiration = db.prepare('SELECT * FROM expirations WHERE id = ?').get(result.lastInsertRowid);
+    const { lastInsertRowid } = await queryRun(
+      'INSERT INTO expirations (vehicle_id, tipo, tipo_personalizado, fecha_vencimiento, observaciones) VALUES (?, ?, ?, ?, ?)',
+      [vehicleId, tipo, tipo_personalizado || null, fecha_vencimiento, observaciones || null]
+    );
+    const newExpiration = await queryOne('SELECT * FROM expirations WHERE id = ?', [lastInsertRowid]);
     res.status(201).json(newExpiration);
   } catch (error) {
     console.error('Error al crear vencimiento:', error);
@@ -78,8 +62,7 @@ router.post('/vehicles/:id/expirations', (req, res) => {
   }
 });
 
-// PUT /api/expirations/:id - Editar vencimiento
-router.put('/expirations/:id', (req, res) => {
+router.put('/expirations/:id', async (req, res) => {
   try {
     const expirationId = req.params.id;
     const { tipo, tipo_personalizado, fecha_vencimiento, observaciones } = req.body;
@@ -87,56 +70,38 @@ router.put('/expirations/:id', (req, res) => {
     if (!tipo || !fecha_vencimiento) {
       return res.status(400).json({ error: 'El tipo y la fecha de vencimiento son obligatorios' });
     }
-
-    const tiposValidos = ['seguro', 'vtv', 'matafuegos', 'otro'];
-    if (!tiposValidos.includes(tipo)) {
+    if (!['seguro', 'vtv', 'matafuegos', 'otro'].includes(tipo)) {
       return res.status(400).json({ error: 'Tipo de vencimiento no válido' });
     }
-
     if (tipo === 'otro' && !tipo_personalizado) {
       return res.status(400).json({ error: 'Cuando el tipo es "Otro", debe especificar el nombre' });
     }
 
-    const existingExpiration = verifyExpirationFamily(expirationId, req.user.familyId);
-    if (!existingExpiration) {
-      return res.status(404).json({ error: 'Vencimiento no encontrado' });
-    }
+    const existing = await verifyExpirationFamily(expirationId, req.user.familyId);
+    if (!existing) return res.status(404).json({ error: 'Vencimiento no encontrado' });
 
-    const stmt = db.prepare(`
-      UPDATE expirations 
-      SET tipo = ?, tipo_personalizado = ?, fecha_vencimiento = ?, observaciones = ?
-      WHERE id = ?
-    `);
+    const { rowsAffected } = await queryRun(
+      'UPDATE expirations SET tipo = ?, tipo_personalizado = ?, fecha_vencimiento = ?, observaciones = ? WHERE id = ?',
+      [tipo, tipo_personalizado || null, fecha_vencimiento, observaciones || null, expirationId]
+    );
+    if (rowsAffected === 0) return res.status(404).json({ error: 'Vencimiento no encontrado' });
 
-    const result = stmt.run(tipo, tipo_personalizado || null, fecha_vencimiento, observaciones || null, expirationId);
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Vencimiento no encontrado' });
-    }
-
-    const updatedExpiration = db.prepare('SELECT * FROM expirations WHERE id = ?').get(expirationId);
-    res.json(updatedExpiration);
+    const updated = await queryOne('SELECT * FROM expirations WHERE id = ?', [expirationId]);
+    res.json(updated);
   } catch (error) {
     console.error('Error al actualizar vencimiento:', error);
     res.status(500).json({ error: 'Error al actualizar vencimiento' });
   }
 });
 
-// DELETE /api/expirations/:id - Eliminar vencimiento
-router.delete('/expirations/:id', (req, res) => {
+router.delete('/expirations/:id', async (req, res) => {
   try {
     const expirationId = req.params.id;
-    const existingExpiration = verifyExpirationFamily(expirationId, req.user.familyId);
+    const existing = await verifyExpirationFamily(expirationId, req.user.familyId);
+    if (!existing) return res.status(404).json({ error: 'Vencimiento no encontrado' });
 
-    if (!existingExpiration) {
-      return res.status(404).json({ error: 'Vencimiento no encontrado' });
-    }
-
-    const stmt = db.prepare('DELETE FROM expirations WHERE id = ?');
-    const result = stmt.run(expirationId);
-
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Vencimiento no encontrado' });
-    }
+    const { rowsAffected } = await queryRun('DELETE FROM expirations WHERE id = ?', [expirationId]);
+    if (rowsAffected === 0) return res.status(404).json({ error: 'Vencimiento no encontrado' });
 
     res.json({ message: 'Vencimiento eliminado correctamente' });
   } catch (error) {

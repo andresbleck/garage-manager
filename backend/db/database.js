@@ -1,114 +1,116 @@
-const Database = require('better-sqlite3');
+const { createClient } = require('@libsql/client');
 const path = require('path');
 const crypto = require('crypto');
 
-// Crear la base de datos en la carpeta db
-const dbPath = path.join(__dirname, 'garage.db');
-const db = new Database(dbPath);
+const db = createClient({
+  url: process.env.TURSO_DATABASE_URL || `file:${path.join(__dirname, 'garage.db')}`,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
 
-// Crear tablas si no existen
-function inicializarBaseDeDatos() {
-  // Tabla families
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS families (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL,
-      created_at TEXT NOT NULL
-    )
-  `);
+async function queryOne(sql, args = []) {
+  const result = await db.execute({ sql, args });
+  return result.rows[0] || null;
+}
 
-  // Tabla users
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      family_id INTEGER NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      display_name TEXT NOT NULL,
-      role TEXT NOT NULL CHECK(role IN ('admin', 'member')) DEFAULT 'member',
-      created_at TEXT NOT NULL,
-      FOREIGN KEY (family_id) REFERENCES families (id) ON DELETE CASCADE
-    )
-  `);
+async function queryAll(sql, args = []) {
+  const result = await db.execute({ sql, args });
+  return result.rows;
+}
 
-  // Tabla vehicles
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS vehicles (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      marca TEXT NOT NULL,
-      modelo TEXT NOT NULL,
-      patente TEXT NOT NULL,
-      año INTEGER NOT NULL,
-      foto_url TEXT,
-      family_id INTEGER NOT NULL DEFAULT 1,
-      FOREIGN KEY (family_id) REFERENCES families (id) ON DELETE CASCADE
-    )
-  `);
+async function queryRun(sql, args = []) {
+  const result = await db.execute({ sql, args });
+  return {
+    lastInsertRowid: Number(result.lastInsertRowid),
+    rowsAffected: result.rowsAffected,
+  };
+}
 
-  // Tabla expirations
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS expirations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      vehicle_id INTEGER NOT NULL,
-      tipo TEXT NOT NULL CHECK (tipo IN ('seguro', 'vtv', 'matafuegos', 'otro')),
-      tipo_personalizado TEXT,
-      fecha_vencimiento TEXT NOT NULL,
-      observaciones TEXT,
-      FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
-    )
-  `);
+async function inicializarBaseDeDatos() {
+  await db.execute(`CREATE TABLE IF NOT EXISTS families (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    created_at TEXT NOT NULL
+  )`);
 
-  // Tabla repairs
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS repairs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      vehicle_id INTEGER NOT NULL,
-      tipo TEXT NOT NULL CHECK (tipo IN ('cambio_bateria', 'cambio_aceite', 'cambio_ruedas', 'aire_acondicionado', 'otro')),
-      tipo_personalizado TEXT,
-      descripcion TEXT NOT NULL,
-      fecha TEXT NOT NULL,
-      costo REAL,
-      kilometraje INTEGER,
-      FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
-    )
-  `);
+  await db.execute(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    family_id INTEGER NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    role TEXT NOT NULL CHECK(role IN ('admin', 'member')) DEFAULT 'member',
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (family_id) REFERENCES families (id) ON DELETE CASCADE
+  )`);
 
-  migrateColumn('vehicles', 'family_id', 'INTEGER DEFAULT 1');
+  await db.execute(`CREATE TABLE IF NOT EXISTS vehicles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    marca TEXT NOT NULL,
+    modelo TEXT NOT NULL,
+    patente TEXT NOT NULL,
+    año INTEGER NOT NULL,
+    foto_url TEXT,
+    family_id INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (family_id) REFERENCES families (id) ON DELETE CASCADE
+  )`);
 
-  migrateVehiclesPatenteIndex();
+  await db.execute(`CREATE TABLE IF NOT EXISTS expirations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vehicle_id INTEGER NOT NULL,
+    tipo TEXT NOT NULL CHECK (tipo IN ('seguro', 'vtv', 'matafuegos', 'otro')),
+    tipo_personalizado TEXT,
+    fecha_vencimiento TEXT NOT NULL,
+    observaciones TEXT,
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
+  )`);
 
-  ensureDefaultFamily();
-  db.exec('UPDATE vehicles SET family_id = 1 WHERE family_id IS NULL');
+  await db.execute(`CREATE TABLE IF NOT EXISTS repairs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vehicle_id INTEGER NOT NULL,
+    tipo TEXT NOT NULL CHECK (tipo IN ('cambio_bateria', 'cambio_aceite', 'cambio_ruedas', 'aire_acondicionado', 'otro')),
+    tipo_personalizado TEXT,
+    descripcion TEXT NOT NULL,
+    fecha TEXT NOT NULL,
+    costo REAL,
+    kilometraje INTEGER,
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
+  )`);
 
-  migrateColumn('expirations', 'tipo_personalizado', 'TEXT');
-  migrateColumn('repairs', 'tipo_personalizado', 'TEXT');
-
-  migrateExpirationsFK();
-  migrateRepairsFK();
-
-  ensureTestUser();
+  await migrateColumn('vehicles', 'family_id', 'INTEGER DEFAULT 1');
+  await migrateVehiclesPatenteIndex();
+  await ensureDefaultFamily();
+  await db.execute('UPDATE vehicles SET family_id = 1 WHERE family_id IS NULL');
+  await migrateColumn('expirations', 'tipo_personalizado', 'TEXT');
+  await migrateColumn('repairs', 'tipo_personalizado', 'TEXT');
+  await migrateExpirationsFK();
+  await migrateRepairsFK();
+  await ensureTestUser();
 
   console.log('Base de datos inicializada correctamente');
 }
 
-function migrateVehiclesPatenteIndex() {
-  const indexes = db.prepare("PRAGMA index_list('vehicles')").all();
-  const hasGlobalPatenteIndex = indexes.some((index) => {
-    if (!index.unique) return false;
-    const info = db.prepare(`PRAGMA index_info(${index.name})`).all();
-    // Solo migrar si es un índice de una sola columna sobre 'patente' (el antiguo estilo)
-    return info.length === 1 && info[0].name === 'patente';
-  });
+async function migrateVehiclesPatenteIndex() {
+  try {
+    const indexes = await queryAll("PRAGMA index_list('vehicles')");
+    const hasGlobalPatenteIndex = indexes.some((index) => {
+      if (!index.unique) return false;
+      return false; // placeholder — real check below
+    });
+    // Buscar índice único de columna única sobre 'patente'
+    let needsMigration = false;
+    for (const index of indexes) {
+      if (!index.unique) continue;
+      const info = await queryAll(`PRAGMA index_info(${index.name})`);
+      if (info.length === 1 && info[0].name === 'patente') {
+        needsMigration = true;
+        break;
+      }
+    }
+    if (!needsMigration) return;
 
-  if (!hasGlobalPatenteIndex) {
-    return;
-  }
-
-  console.log('Migrando índice único de patente en vehicles a nivel familia');
-  db.exec('ALTER TABLE vehicles RENAME TO vehicles_old');
-
-  db.exec(`
-    CREATE TABLE vehicles (
+    console.log('Migrando índice único de patente en vehicles a nivel familia');
+    await db.execute('ALTER TABLE vehicles RENAME TO vehicles_old');
+    await db.execute(`CREATE TABLE vehicles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       marca TEXT NOT NULL,
       modelo TEXT NOT NULL,
@@ -117,26 +119,22 @@ function migrateVehiclesPatenteIndex() {
       foto_url TEXT,
       family_id INTEGER NOT NULL DEFAULT 1,
       FOREIGN KEY (family_id) REFERENCES families (id) ON DELETE CASCADE
-    )
-  `);
-
-  db.exec(`
-    INSERT INTO vehicles (id, marca, modelo, patente, año, foto_url, family_id)
-    SELECT id, marca, modelo, patente, año, foto_url, family_id FROM vehicles_old
-  `);
-
-  db.exec('DROP TABLE vehicles_old');
-  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicles_family_patente ON vehicles(family_id, patente)');
-}
-
-
-function ensureDefaultFamily() {
-  const familyExists = db.prepare('SELECT id FROM families ORDER BY id LIMIT 1').get();
-  if (!familyExists) {
-    db.prepare('INSERT INTO families (name, created_at) VALUES (?, ?)').run('Familia', new Date().toISOString());
+    )`);
+    await db.execute(`INSERT INTO vehicles (id, marca, modelo, patente, año, foto_url, family_id)
+      SELECT id, marca, modelo, patente, año, foto_url, family_id FROM vehicles_old`);
+    await db.execute('DROP TABLE vehicles_old');
+    await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicles_family_patente ON vehicles(family_id, patente)');
+  } catch (e) {
+    console.error('Error en migrateVehiclesPatenteIndex:', e.message);
   }
 }
 
+async function ensureDefaultFamily() {
+  const family = await queryOne('SELECT id FROM families ORDER BY id LIMIT 1');
+  if (!family) {
+    await queryRun('INSERT INTO families (name, created_at) VALUES (?, ?)', ['Familia', new Date().toISOString()]);
+  }
+}
 
 function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex');
@@ -144,35 +142,36 @@ function hashPassword(password) {
   return `${salt}:${hash}`;
 }
 
-function ensureTestUser() {
+async function ensureTestUser() {
   const testEmail = 'admingarage@gmail.com';
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(testEmail);
+  const existing = await queryOne('SELECT id FROM users WHERE email = ?', [testEmail]);
   if (existing) return;
 
-  let family = db.prepare("SELECT id FROM families WHERE name = 'Demo'").get();
+  let family = await queryOne("SELECT id FROM families WHERE name = 'Demo'");
   if (!family) {
-    const result = db
-      .prepare('INSERT INTO families (name, created_at) VALUES (?, ?)')
-      .run('Demo', new Date().toISOString());
-    family = { id: result.lastInsertRowid };
+    const { lastInsertRowid } = await queryRun(
+      'INSERT INTO families (name, created_at) VALUES (?, ?)',
+      ['Demo', new Date().toISOString()]
+    );
+    family = { id: lastInsertRowid };
   }
 
   const passwordHash = hashPassword('GarageManager');
-  db.prepare(
-    'INSERT INTO users (family_id, email, password_hash, display_name, role, created_at) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(family.id, testEmail, passwordHash, 'Admin Demo', 'admin', new Date().toISOString());
-
+  await queryRun(
+    'INSERT INTO users (family_id, email, password_hash, display_name, role, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    [family.id, testEmail, passwordHash, 'Admin Demo', 'admin', new Date().toISOString()]
+  );
   console.log('Usuario de prueba creado: admingarage@gmail.com');
 }
 
-function migrateExpirationsFK() {
-  const schema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='expirations'").get();
-  if (!schema || !schema.sql.includes('vehicles_old')) return;
+async function migrateExpirationsFK() {
+  try {
+    const schema = await queryOne("SELECT sql FROM sqlite_master WHERE type='table' AND name='expirations'");
+    if (!schema || !schema.sql.includes('vehicles_old')) return;
 
-  console.log('Migrando FK de expirations: apuntando a vehicles...');
-  db.exec('ALTER TABLE expirations RENAME TO expirations_old');
-  db.exec(`
-    CREATE TABLE expirations (
+    console.log('Migrando FK de expirations: apuntando a vehicles...');
+    await db.execute('ALTER TABLE expirations RENAME TO expirations_old');
+    await db.execute(`CREATE TABLE expirations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       vehicle_id INTEGER NOT NULL,
       tipo TEXT NOT NULL CHECK (tipo IN ('seguro', 'vtv', 'matafuegos', 'otro')),
@@ -180,24 +179,24 @@ function migrateExpirationsFK() {
       fecha_vencimiento TEXT NOT NULL,
       observaciones TEXT,
       FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
-    )
-  `);
-  db.exec(`
-    INSERT INTO expirations (id, vehicle_id, tipo, tipo_personalizado, fecha_vencimiento, observaciones)
-    SELECT id, vehicle_id, tipo, tipo_personalizado, fecha_vencimiento, observaciones FROM expirations_old
-  `);
-  db.exec('DROP TABLE expirations_old');
-  console.log('Migración expirations FK completada');
+    )`);
+    await db.execute(`INSERT INTO expirations (id, vehicle_id, tipo, tipo_personalizado, fecha_vencimiento, observaciones)
+      SELECT id, vehicle_id, tipo, tipo_personalizado, fecha_vencimiento, observaciones FROM expirations_old`);
+    await db.execute('DROP TABLE expirations_old');
+    console.log('Migración expirations FK completada');
+  } catch (e) {
+    console.error('Error en migrateExpirationsFK:', e.message);
+  }
 }
 
-function migrateRepairsFK() {
-  const schema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='repairs'").get();
-  if (!schema || !schema.sql.includes('vehicles_old')) return;
+async function migrateRepairsFK() {
+  try {
+    const schema = await queryOne("SELECT sql FROM sqlite_master WHERE type='table' AND name='repairs'");
+    if (!schema || !schema.sql.includes('vehicles_old')) return;
 
-  console.log('Migrando FK de repairs: apuntando a vehicles...');
-  db.exec('ALTER TABLE repairs RENAME TO repairs_old');
-  db.exec(`
-    CREATE TABLE repairs (
+    console.log('Migrando FK de repairs: apuntando a vehicles...');
+    await db.execute('ALTER TABLE repairs RENAME TO repairs_old');
+    await db.execute(`CREATE TABLE repairs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       vehicle_id INTEGER NOT NULL,
       tipo TEXT NOT NULL CHECK (tipo IN ('cambio_bateria', 'cambio_aceite', 'cambio_ruedas', 'aire_acondicionado', 'otro')),
@@ -207,26 +206,27 @@ function migrateRepairsFK() {
       costo REAL,
       kilometraje INTEGER,
       FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
-    )
-  `);
-  db.exec(`
-    INSERT INTO repairs (id, vehicle_id, tipo, tipo_personalizado, descripcion, fecha, costo, kilometraje)
-    SELECT id, vehicle_id, tipo, tipo_personalizado, descripcion, fecha, costo, kilometraje FROM repairs_old
-  `);
-  db.exec('DROP TABLE repairs_old');
-  console.log('Migración repairs FK completada');
-}
-
-function migrateColumn(table, column, type) {
-  const columnInfo = db.prepare(`PRAGMA table_info(${table})`).all();
-  const exists = columnInfo.some((col) => col.name === column);
-  if (!exists) {
-    console.log(`Migrando tabla ${table}: agregando columna ${column}`);
-    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+    )`);
+    await db.execute(`INSERT INTO repairs (id, vehicle_id, tipo, tipo_personalizado, descripcion, fecha, costo, kilometraje)
+      SELECT id, vehicle_id, tipo, tipo_personalizado, descripcion, fecha, costo, kilometraje FROM repairs_old`);
+    await db.execute('DROP TABLE repairs_old');
+    console.log('Migración repairs FK completada');
+  } catch (e) {
+    console.error('Error en migrateRepairsFK:', e.message);
   }
 }
 
-// Inicializar la base de datos
-inicializarBaseDeDatos();
+async function migrateColumn(table, column, type) {
+  try {
+    const columnInfo = await queryAll(`PRAGMA table_info(${table})`);
+    const exists = columnInfo.some((col) => col.name === column);
+    if (!exists) {
+      console.log(`Migrando tabla ${table}: agregando columna ${column}`);
+      await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+    }
+  } catch (e) {
+    console.error(`Error en migrateColumn(${table}, ${column}):`, e.message);
+  }
+}
 
-module.exports = db;
+module.exports = { db, inicializarBaseDeDatos, queryOne, queryAll, queryRun };

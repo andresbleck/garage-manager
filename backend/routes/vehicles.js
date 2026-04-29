@@ -1,5 +1,5 @@
 const express = require('express');
-const db = require('../db/database');
+const { queryOne, queryAll, queryRun } = require('../db/database');
 const auth = require('../middleware/auth');
 const router = express.Router();
 
@@ -14,15 +14,15 @@ function requireFamilyId(req, res) {
   return familyId;
 }
 
-// GET /api/vehicles - Listar vehículos de la familia
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const familyId = requireFamilyId(req, res);
     if (!familyId) return;
 
-    const vehicles = db
-      .prepare('SELECT * FROM vehicles WHERE family_id = ? ORDER BY marca, modelo')
-      .all(familyId);
+    const vehicles = await queryAll(
+      'SELECT * FROM vehicles WHERE family_id = ? ORDER BY marca, modelo',
+      [familyId]
+    );
     res.json(vehicles);
   } catch (error) {
     console.error('Error al obtener vehículos:', error);
@@ -30,19 +30,16 @@ router.get('/', (req, res) => {
   }
 });
 
-// GET /api/vehicles/:id - Obtener un vehículo específico
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const familyId = requireFamilyId(req, res);
     if (!familyId) return;
 
-    const vehicle = db
-      .prepare('SELECT * FROM vehicles WHERE id = ? AND family_id = ?')
-      .get(req.params.id, familyId);
-
-    if (!vehicle) {
-      return res.status(404).json({ error: 'Vehículo no encontrado' });
-    }
+    const vehicle = await queryOne(
+      'SELECT * FROM vehicles WHERE id = ? AND family_id = ?',
+      [req.params.id, familyId]
+    );
+    if (!vehicle) return res.status(404).json({ error: 'Vehículo no encontrado' });
     res.json(vehicle);
   } catch (error) {
     console.error('Error al obtener vehículo:', error);
@@ -50,8 +47,7 @@ router.get('/:id', (req, res) => {
   }
 });
 
-// POST /api/vehicles - Crear nuevo vehículo
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { marca, modelo, patente, año, foto_url } = req.body;
 
@@ -62,20 +58,17 @@ router.post('/', (req, res) => {
     const familyId = requireFamilyId(req, res);
     if (!familyId) return;
 
-    const existingVehicle = db
-      .prepare('SELECT id FROM vehicles WHERE patente = ? AND family_id = ?')
-      .get(patente, familyId);
-    if (existingVehicle) {
-      return res.status(400).json({ error: 'La patente ya existe en tu familia' });
-    }
+    const existing = await queryOne(
+      'SELECT id FROM vehicles WHERE patente = ? AND family_id = ?',
+      [patente, familyId]
+    );
+    if (existing) return res.status(400).json({ error: 'La patente ya existe en tu familia' });
 
-    const stmt = db.prepare(`
-      INSERT INTO vehicles (marca, modelo, patente, año, foto_url, family_id)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-
-    const result = stmt.run(marca, modelo, patente, año, foto_url || null, familyId);
-    const newVehicle = db.prepare('SELECT * FROM vehicles WHERE id = ?').get(result.lastInsertRowid);
+    const { lastInsertRowid } = await queryRun(
+      'INSERT INTO vehicles (marca, modelo, patente, año, foto_url, family_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [marca, modelo, patente, año, foto_url || null, familyId]
+    );
+    const newVehicle = await queryOne('SELECT * FROM vehicles WHERE id = ?', [lastInsertRowid]);
     res.status(201).json(newVehicle);
   } catch (error) {
     console.error('Error al crear vehículo:', error);
@@ -83,8 +76,7 @@ router.post('/', (req, res) => {
   }
 });
 
-// PUT /api/vehicles/:id - Editar vehículo
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { marca, modelo, patente, año, foto_url } = req.body;
     const vehicleId = req.params.id;
@@ -96,61 +88,49 @@ router.put('/:id', (req, res) => {
     const familyId = requireFamilyId(req, res);
     if (!familyId) return;
 
-    const existingVehicle = db
-      .prepare('SELECT id FROM vehicles WHERE id = ? AND family_id = ?')
-      .get(vehicleId, familyId);
-    if (!existingVehicle) {
-      return res.status(404).json({ error: 'Vehículo no encontrado' });
-    }
+    const existing = await queryOne(
+      'SELECT id FROM vehicles WHERE id = ? AND family_id = ?',
+      [vehicleId, familyId]
+    );
+    if (!existing) return res.status(404).json({ error: 'Vehículo no encontrado' });
 
-    const patenteCheck = db
-      .prepare('SELECT id FROM vehicles WHERE patente = ? AND id != ? AND family_id = ?')
-      .get(patente, vehicleId, familyId);
-    if (patenteCheck) {
-      return res.status(400).json({ error: 'La patente ya existe en tu familia' });
-    }
+    const patenteCheck = await queryOne(
+      'SELECT id FROM vehicles WHERE patente = ? AND id != ? AND family_id = ?',
+      [patente, vehicleId, familyId]
+    );
+    if (patenteCheck) return res.status(400).json({ error: 'La patente ya existe en tu familia' });
 
-    const stmt = db.prepare(`
-      UPDATE vehicles 
-      SET marca = ?, modelo = ?, patente = ?, año = ?, foto_url = ?
-      WHERE id = ? AND family_id = ?
-    `);
+    const { rowsAffected } = await queryRun(
+      'UPDATE vehicles SET marca = ?, modelo = ?, patente = ?, año = ?, foto_url = ? WHERE id = ? AND family_id = ?',
+      [marca, modelo, patente, año, foto_url || null, vehicleId, familyId]
+    );
+    if (rowsAffected === 0) return res.status(404).json({ error: 'Vehículo no encontrado' });
 
-    const result = stmt.run(marca, modelo, patente, año, foto_url || null, vehicleId, familyId);
-
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Vehículo no encontrado' });
-    }
-
-    const updatedVehicle = db.prepare('SELECT * FROM vehicles WHERE id = ?').get(vehicleId);
-    res.json(updatedVehicle);
+    const updated = await queryOne('SELECT * FROM vehicles WHERE id = ?', [vehicleId]);
+    res.json(updated);
   } catch (error) {
     console.error('Error al actualizar vehículo:', error);
     res.status(500).json({ error: 'Error al actualizar vehículo' });
   }
 });
 
-// DELETE /api/vehicles/:id - Eliminar vehículo
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const vehicleId = req.params.id;
-
     const familyId = requireFamilyId(req, res);
     if (!familyId) return;
 
-    const existingVehicle = db
-      .prepare('SELECT id FROM vehicles WHERE id = ? AND family_id = ?')
-      .get(vehicleId, familyId);
-    if (!existingVehicle) {
-      return res.status(404).json({ error: 'Vehículo no encontrado' });
-    }
+    const existing = await queryOne(
+      'SELECT id FROM vehicles WHERE id = ? AND family_id = ?',
+      [vehicleId, familyId]
+    );
+    if (!existing) return res.status(404).json({ error: 'Vehículo no encontrado' });
 
-    const stmt = db.prepare('DELETE FROM vehicles WHERE id = ? AND family_id = ?');
-    const result = stmt.run(vehicleId, familyId);
-
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Vehículo no encontrado' });
-    }
+    const { rowsAffected } = await queryRun(
+      'DELETE FROM vehicles WHERE id = ? AND family_id = ?',
+      [vehicleId, familyId]
+    );
+    if (rowsAffected === 0) return res.status(404).json({ error: 'Vehículo no encontrado' });
 
     res.json({ message: 'Vehículo eliminado correctamente' });
   } catch (error) {
