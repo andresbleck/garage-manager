@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const { queryAll, queryRun } = require('../db/database');
 
 const THRESHOLDS = [
@@ -24,17 +24,7 @@ function daysUntil(fechaVencimiento) {
   return Math.round((exp - today) / (1000 * 60 * 60 * 24));
 }
 
-function createTransporter() {
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
-  });
-}
-
-async function sendReminderEmail(transporter, to, displayName, { tipoLabel, vehiculo, fechaVencimiento, days }) {
+async function sendReminderEmail(resend, to, displayName, { tipoLabel, vehiculo, fechaVencimiento, days }) {
   const dateStr = new Date(fechaVencimiento + 'T12:00:00').toLocaleDateString('es-AR', {
     day: '2-digit', month: 'long', year: 'numeric',
   });
@@ -80,22 +70,24 @@ async function sendReminderEmail(transporter, to, displayName, { tipoLabel, vehi
     </div>
   `;
 
-  await transporter.sendMail({
-    from: `"GarageManager" <${process.env.GMAIL_USER}>`,
+  const { data, error } = await resend.emails.send({
+    from: 'onboarding@resend.dev',
     to,
     subject,
     html,
   });
-  console.log(`[Notificaciones] Email enviado a ${to}: ${subject}`);
+
+  if (error) throw new Error(error.message);
+  console.log(`[Notificaciones] Email enviado a ${to}: ${subject} (id: ${data.id})`);
 }
 
 async function checkAndSendNotifications() {
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-    console.log('[Notificaciones] GMAIL_USER o GMAIL_APP_PASSWORD no configurados, omitiendo');
+  if (!process.env.RESEND_API_KEY) {
+    console.log('[Notificaciones] RESEND_API_KEY no configurado, omitiendo');
     return;
   }
 
-  const transporter = createTransporter();
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
   try {
     const rows = await queryAll(`
@@ -111,6 +103,8 @@ async function checkAndSendNotifications() {
         AND u.role = 'admin'
     `);
 
+    console.log(`[Notificaciones] Vencimientos vigentes encontrados: ${rows.length}`);
+
     for (const row of rows) {
       const days = daysUntil(row.fecha_vencimiento);
       const tipoLabel = row.tipo === 'otro'
@@ -118,12 +112,13 @@ async function checkAndSendNotifications() {
         : TIPO_LABELS[row.tipo];
       const vehiculo = `${row.marca} ${row.modelo} (${row.patente})`;
 
-      // Encuentra el umbral más urgente aún no notificado
+      console.log(`[Notificaciones] ${tipoLabel} — ${vehiculo}: ${days}d | flags: 30=${row.notified_30} 15=${row.notified_15} 5=${row.notified_5} 0=${row.notified_0}`);
+
       const target = THRESHOLDS.find(t => days <= t.days && !row[t.field]);
       if (!target) continue;
 
       try {
-        await sendReminderEmail(transporter, row.email, row.display_name, {
+        await sendReminderEmail(resend, row.email, row.display_name, {
           tipoLabel, vehiculo, fechaVencimiento: row.fecha_vencimiento, days,
         });
         await queryRun(`UPDATE expirations SET ${target.field} = 1 WHERE id = ?`, [row.id]);
@@ -137,7 +132,6 @@ async function checkAndSendNotifications() {
 }
 
 function startNotificationCron() {
-  // Todos los días a las 9:00 AM hora Argentina (UTC-3)
   cron.schedule('0 9 * * *', checkAndSendNotifications, {
     timezone: 'America/Argentina/Buenos_Aires',
   });
