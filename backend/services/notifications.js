@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 const { queryAll, queryRun } = require('../db/database');
 
 const THRESHOLDS = [
@@ -24,7 +24,17 @@ function daysUntil(fechaVencimiento) {
   return Math.round((exp - today) / (1000 * 60 * 60 * 24));
 }
 
-async function sendReminderEmail(resend, to, displayName, { tipoLabel, vehiculo, fechaVencimiento, days }) {
+function createTransporter() {
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  });
+}
+
+async function sendReminderEmail(transporter, to, displayName, { tipoLabel, vehiculo, fechaVencimiento, days }) {
   const dateStr = new Date(fechaVencimiento + 'T12:00:00').toLocaleDateString('es-AR', {
     day: '2-digit', month: 'long', year: 'numeric',
   });
@@ -70,24 +80,22 @@ async function sendReminderEmail(resend, to, displayName, { tipoLabel, vehiculo,
     </div>
   `;
 
-  const { data, error } = await resend.emails.send({
-    from: 'onboarding@resend.dev',
+  await transporter.sendMail({
+    from: `"GarageManager" <${process.env.GMAIL_USER}>`,
     to,
     subject,
     html,
   });
-
-  if (error) throw new Error(error.message);
-  console.log(`[Notificaciones] Email enviado a ${to}: ${subject} (id: ${data.id})`);
+  console.log(`[Notificaciones] Email enviado a ${to}: ${subject}`);
 }
 
 async function checkAndSendNotifications() {
-  if (!process.env.RESEND_API_KEY) {
-    console.log('[Notificaciones] RESEND_API_KEY no configurado, omitiendo');
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    console.log('[Notificaciones] GMAIL_USER o GMAIL_APP_PASSWORD no configurados, omitiendo');
     return;
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const transporter = createTransporter();
 
   try {
     const rows = await queryAll(`
@@ -118,7 +126,7 @@ async function checkAndSendNotifications() {
       if (!target) continue;
 
       try {
-        await sendReminderEmail(resend, row.email, row.display_name, {
+        await sendReminderEmail(transporter, row.email, row.display_name, {
           tipoLabel, vehiculo, fechaVencimiento: row.fecha_vencimiento, days,
         });
         await queryRun(`UPDATE expirations SET ${target.field} = 1 WHERE id = ?`, [row.id]);
