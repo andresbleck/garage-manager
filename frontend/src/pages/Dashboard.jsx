@@ -115,14 +115,14 @@ const Dashboard = () => {
 
       {/* Vehículos con resumen */}
       {vehicles.length === 0 ? (
-        <div className="rounded-2xl bg-white p-12 text-center border border-slate-100 shadow-sm">
+        <div className="max-w-3xl mx-auto rounded-2xl bg-white p-12 text-center border border-slate-100 shadow-sm">
           <p className="text-slate-400 mb-4">No tenés vehículos registrados</p>
           <Link to="/vehicles" className="inline-flex items-center bg-blue-600 text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors">
             Agregar vehículo
           </Link>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="max-w-3xl mx-auto space-y-4">
           <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-400">Tus vehículos</h3>
           {vehicles.map(v => {
             const exps = expByVehicle[v.id] || [];

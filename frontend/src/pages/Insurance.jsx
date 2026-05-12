@@ -147,7 +147,7 @@ const Insurance = () => {
   }
 
   return (
-    <div>
+    <div className="max-w-3xl mx-auto">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-slate-900">Documentos</h2>
         <p className="text-slate-400 text-sm mt-0.5">Fotos y PDFs de seguros, cédulas y más. Guardados en la nube.</p>
