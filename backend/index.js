@@ -25,6 +25,15 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 
+app.post('/api/test-notifications', async (req, res) => {
+  try {
+    await checkAndSendNotifications();
+    res.json({ message: 'Chequeo de notificaciones ejecutado. Revisá los logs del servidor.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/vehicles', vehiclesRoutes);
 app.use('/api', expirationsRoutes);
@@ -33,15 +42,6 @@ app.use('/api', documentsRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'GarageManager API funcionando correctamente' });
-});
-
-app.post('/api/test-notifications', async (req, res) => {
-  try {
-    await checkAndSendNotifications();
-    res.json({ message: 'Chequeo de notificaciones ejecutado. Revisá los logs del servidor.' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
 });
 
 app.use((err, req, res, next) => {
