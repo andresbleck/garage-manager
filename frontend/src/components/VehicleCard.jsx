@@ -1,133 +1,92 @@
 import { Link } from 'react-router-dom';
-import api from '../api';
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import api from '../api';
+
+function daysUntil(fecha) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const exp = new Date(fecha + 'T12:00:00');
+  exp.setHours(0, 0, 0, 0);
+  return Math.round((exp - today) / 86400000);
+}
 
 const VehicleCard = ({ vehicle, onDelete, insuranceDocsCount = 0 }) => {
-  const { isAuthenticated } = useAuth();
   const [expirations, setExpirations] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchExpirations();
+    api.get(`/api/vehicles/${vehicle.id}/expirations`)
+      .then(r => setExpirations(r.data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [vehicle.id]);
 
-  const fetchExpirations = async () => {
-    try {
-      const response = await api.get(`/api/vehicles/${vehicle.id}/expirations`);
-      setExpirations(response.data);
-    } catch (error) {
-      console.error('Error fetching expirations:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const activeAlerts = loading ? [] : expirations.filter(exp => {
+    if (exp.estado === 'regularizado') return false;
+    return daysUntil(exp.fecha_vencimiento) <= 30;
+  });
 
-  const getExpirationStatus = (fechaVencimiento) => {
-    const today = new Date();
-    const expirationDate = new Date(fechaVencimiento);
-    const diffTime = expirationDate - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) {
-      return { status: 'vencido', color: 'red', text: 'Vencido' };
-    } else if (diffDays <= 30) {
-      return { status: 'por-vencer', color: 'yellow', text: `Por vencer (${diffDays} días)` };
-    } else {
-      return { status: 'ok', color: 'green', text: 'OK' };
-    }
-  };
-
-  const hasNearExpiration = () => {
-    if (loading) return false;
-    return expirations.some(exp => {
-      const status = getExpirationStatus(exp.fecha_vencimiento);
-      return status.status === 'vencido' || status.status === 'por-vencer';
-    });
-  };
-
-  const getExpirationBadge = () => {
-    if (loading) return null;
-    
-    const vencidos = expirations.filter(exp => 
-      getExpirationStatus(exp.fecha_vencimiento).status === 'vencido'
-    ).length;
-    
-    const porVencer = expirations.filter(exp => 
-      getExpirationStatus(exp.fecha_vencimiento).status === 'por-vencer'
-    ).length;
-
-    if (vencidos > 0) {
-      return (
-        <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded">
-          {vencidos} vencido{vencidos > 1 ? 's' : ''}
-        </span>
-      );
-    } else if (porVencer > 0) {
-      return (
-        <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded">
-          {porVencer} por vencer
-        </span>
-      );
-    }
-    return null;
-  };
+  const hasVencido = activeAlerts.some(e => daysUntil(e.fecha_vencimiento) < 0);
+  const alertCount = activeAlerts.length;
 
   return (
-    <div className="group overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md max-w-[450px] w-full mx-auto">
-      <div className="space-y-5 p-6">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+    <div className="group overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md max-w-[450px] w-full mx-auto">
+      {alertCount > 0 && (
+        <div className={`h-1 w-full ${hasVencido ? 'bg-red-500' : 'bg-yellow-400'}`} />
+      )}
+
+      <div className="p-6 space-y-4">
+        <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h3 className="truncate text-2xl font-semibold text-slate-900">
+            <h3 className="text-xl font-bold text-slate-900 leading-tight">
               {vehicle.marca} {vehicle.modelo}
             </h3>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <p className="truncate text-2xl font-semibold text-slate-900">
-                {vehicle.patente}
-              </p>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
-                Año {vehicle.año}
-              </span>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span className="text-slate-500 text-sm font-medium">{vehicle.patente}</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-slate-400 text-sm">{vehicle.año}</span>
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-center sm:w-28">
-            <p className="text-[9px] uppercase tracking-[0.22em] text-slate-400">Documentos</p>
-            <p className="text-xl font-semibold text-slate-900">{insuranceDocsCount}</p>
-            <p className="text-[10px] text-slate-500">archivo{insuranceDocsCount === 1 ? '' : 's'}</p>
+          <div className="shrink-0 flex flex-col items-center rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-center min-w-[60px]">
+            <p className="text-[9px] uppercase tracking-widest text-slate-400 mb-0.5">Docs</p>
+            <p className="text-lg font-bold text-slate-900">{insuranceDocsCount}</p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        {!loading && alertCount > 0 && (
+          <div className={`rounded-xl px-4 py-3 text-sm ${hasVencido ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-yellow-50 text-yellow-700 border border-yellow-100'}`}>
+            <p className="font-semibold mb-0.5">
+              {hasVencido ? 'Atención requerida' : 'Próximos vencimientos'}
+            </p>
+            <p className="text-xs opacity-80">
+              {alertCount} vencimiento{alertCount !== 1 ? 's' : ''} {hasVencido ? 'con problemas' : 'próximos'}
+            </p>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-1">
           <Link
             to={`/vehicle/${vehicle.id}`}
-            className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+            className="inline-flex items-center justify-center rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
           >
             Ver detalles
           </Link>
-          {isAuthenticated && (
-            <div className="flex flex-wrap gap-2">
-              <Link
-                to={`/edit-vehicle/${vehicle.id}`}
-                className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Editar
-              </Link>
-              <button
-                onClick={() => onDelete(vehicle.id)}
-                className="inline-flex items-center justify-center rounded-full bg-rose-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-600"
-              >
-                Eliminar
-              </button>
-            </div>
-          )}
-        </div>
-
-        {hasNearExpiration() && (
-          <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 shadow-sm">
-            <p className="font-medium">⚠️ Hay vencimientos próximos o vencidos</p>
+          <div className="flex gap-2">
+            <Link
+              to={`/edit-vehicle/${vehicle.id}`}
+              className="inline-flex items-center rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              Editar
+            </Link>
+            <button
+              onClick={() => onDelete(vehicle.id)}
+              className="inline-flex items-center rounded-full bg-red-50 border border-red-100 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-100 transition-colors"
+            >
+              Eliminar
+            </button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
