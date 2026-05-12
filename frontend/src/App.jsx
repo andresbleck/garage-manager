@@ -97,56 +97,31 @@ const Header = () => {
           </div>
         </div>
 
-        <nav className="flex flex-wrap items-center gap-3">
-          {isAuthenticated ? (
-            <>
-              <NavLink
-                to="/"
-                end
-                className={({ isActive }) =>
-                  `rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    isActive ? 'bg-white text-slate-900 shadow-lg' : 'text-slate-200 hover:bg-white/10'
-                  }`
-                }
-              >
-                Dashboard
-              </NavLink>
-              <NavLink
-                to="/seguros"
-                className={({ isActive }) =>
-                  `rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    isActive ? 'bg-white text-slate-900 shadow-lg' : 'text-slate-200 hover:bg-white/10'
-                  }`
-                }
-              >
-                Seguros
-              </NavLink>
-            </>
-          ) : (
-            <>
-              <NavLink
-                to="/login"
-                className={({ isActive }) =>
-                  `rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    isActive ? 'bg-white text-slate-900 shadow-lg' : 'text-slate-200 hover:bg-white/10'
-                  }`
-                }
-              >
-                Iniciar sesión
-              </NavLink>
-              <NavLink
-                to="/register"
-                className={({ isActive }) =>
-                  `rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    isActive ? 'bg-white text-slate-900 shadow-lg' : 'text-slate-200 hover:bg-white/10'
-                  }`
-                }
-              >
-                Crear cuenta
-              </NavLink>
-            </>
-          )}
-        </nav>
+        {isAuthenticated && (
+          <nav className="flex flex-wrap items-center gap-3">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                `rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  isActive ? 'bg-white text-slate-900 shadow-lg' : 'text-slate-200 hover:bg-white/10'
+                }`
+              }
+            >
+              Dashboard
+            </NavLink>
+            <NavLink
+              to="/seguros"
+              className={({ isActive }) =>
+                `rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  isActive ? 'bg-white text-slate-900 shadow-lg' : 'text-slate-200 hover:bg-white/10'
+                }`
+              }
+            >
+              Seguros
+            </NavLink>
+          </nav>
+        )}
       </div>
     </header>
   );

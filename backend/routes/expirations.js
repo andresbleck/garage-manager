@@ -5,6 +5,24 @@ const router = express.Router();
 
 router.use(auth);
 
+function daysUntil(fechaVencimiento) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const exp = new Date(fechaVencimiento);
+  exp.setHours(0, 0, 0, 0);
+  return Math.round((exp - today) / (1000 * 60 * 60 * 24));
+}
+
+function notificationFlagsForDate(fecha) {
+  const d = daysUntil(fecha);
+  return {
+    notified_30: d < 30 ? 1 : 0,
+    notified_15: d < 15 ? 1 : 0,
+    notified_5: d < 5 ? 1 : 0,
+    notified_0: d < 0 ? 1 : 0,
+  };
+}
+
 async function verifyVehicleFamily(vehicleId, familyId) {
   return queryOne('SELECT id FROM vehicles WHERE id = ? AND family_id = ?', [vehicleId, familyId]);
 }
@@ -50,9 +68,14 @@ router.post('/vehicles/:id/expirations', async (req, res) => {
     const vehicle = await verifyVehicleFamily(vehicleId, req.user.familyId);
     if (!vehicle) return res.status(404).json({ error: 'Vehículo no encontrado' });
 
+    const flags = notificationFlagsForDate(fecha_vencimiento);
     const { lastInsertRowid } = await queryRun(
-      'INSERT INTO expirations (vehicle_id, tipo, tipo_personalizado, fecha_vencimiento, observaciones) VALUES (?, ?, ?, ?, ?)',
-      [vehicleId, tipo, tipo_personalizado || null, fecha_vencimiento, observaciones || null]
+      `INSERT INTO expirations
+        (vehicle_id, tipo, tipo_personalizado, fecha_vencimiento, observaciones,
+         estado, notified_30, notified_15, notified_5, notified_0)
+       VALUES (?, ?, ?, ?, ?, 'vigente', ?, ?, ?, ?)`,
+      [vehicleId, tipo, tipo_personalizado || null, fecha_vencimiento, observaciones || null,
+       flags.notified_30, flags.notified_15, flags.notified_5, flags.notified_0]
     );
     const newExpiration = await queryOne('SELECT * FROM expirations WHERE id = ?', [lastInsertRowid]);
     res.status(201).json(newExpiration);
@@ -80,9 +103,15 @@ router.put('/expirations/:id', async (req, res) => {
     const existing = await verifyExpirationFamily(expirationId, req.user.familyId);
     if (!existing) return res.status(404).json({ error: 'Vencimiento no encontrado' });
 
+    const flags = notificationFlagsForDate(fecha_vencimiento);
     const { rowsAffected } = await queryRun(
-      'UPDATE expirations SET tipo = ?, tipo_personalizado = ?, fecha_vencimiento = ?, observaciones = ? WHERE id = ?',
-      [tipo, tipo_personalizado || null, fecha_vencimiento, observaciones || null, expirationId]
+      `UPDATE expirations
+       SET tipo = ?, tipo_personalizado = ?, fecha_vencimiento = ?, observaciones = ?,
+           estado = 'vigente', notified_30 = ?, notified_15 = ?, notified_5 = ?, notified_0 = ?
+       WHERE id = ?`,
+      [tipo, tipo_personalizado || null, fecha_vencimiento, observaciones || null,
+       flags.notified_30, flags.notified_15, flags.notified_5, flags.notified_0,
+       expirationId]
     );
     if (rowsAffected === 0) return res.status(404).json({ error: 'Vencimiento no encontrado' });
 
@@ -91,6 +120,45 @@ router.put('/expirations/:id', async (req, res) => {
   } catch (error) {
     console.error('Error al actualizar vencimiento:', error);
     res.status(500).json({ error: 'Error al actualizar vencimiento' });
+  }
+});
+
+router.patch('/expirations/:id/regularizar', async (req, res) => {
+  try {
+    const existing = await verifyExpirationFamily(req.params.id, req.user.familyId);
+    if (!existing) return res.status(404).json({ error: 'Vencimiento no encontrado' });
+
+    await queryRun(
+      "UPDATE expirations SET estado = 'regularizado' WHERE id = ?",
+      [req.params.id]
+    );
+    const updated = await queryOne('SELECT * FROM expirations WHERE id = ?', [req.params.id]);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error al regularizar vencimiento:', error);
+    res.status(500).json({ error: 'Error al regularizar vencimiento' });
+  }
+});
+
+router.patch('/expirations/:id/activar', async (req, res) => {
+  try {
+    const existing = await verifyExpirationFamily(req.params.id, req.user.familyId);
+    if (!existing) return res.status(404).json({ error: 'Vencimiento no encontrado' });
+
+    const exp = await queryOne('SELECT fecha_vencimiento FROM expirations WHERE id = ?', [req.params.id]);
+    const flags = notificationFlagsForDate(exp.fecha_vencimiento);
+
+    await queryRun(
+      `UPDATE expirations
+       SET estado = 'vigente', notified_30 = ?, notified_15 = ?, notified_5 = ?, notified_0 = ?
+       WHERE id = ?`,
+      [flags.notified_30, flags.notified_15, flags.notified_5, flags.notified_0, req.params.id]
+    );
+    const updated = await queryOne('SELECT * FROM expirations WHERE id = ?', [req.params.id]);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error al activar vencimiento:', error);
+    res.status(500).json({ error: 'Error al activar vencimiento' });
   }
 });
 

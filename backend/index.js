@@ -7,6 +7,7 @@ const expirationsRoutes = require('./routes/expirations');
 const repairsRoutes = require('./routes/repairs');
 const documentsRoutes = require('./routes/documents');
 const authRoutes = require('./routes/auth');
+const { startNotificationCron } = require('./services/notifications');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -41,6 +42,7 @@ app.use((err, req, res, next) => {
 
 async function startServer() {
   await inicializarBaseDeDatos();
+  startNotificationCron();
   app.listen(PORT, () => {
     console.log(`Servidor GarageManager corriendo en puerto ${PORT}`);
     console.log(`API disponible en http://localhost:${PORT}`);

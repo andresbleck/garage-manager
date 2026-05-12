@@ -61,6 +61,11 @@ async function inicializarBaseDeDatos() {
     tipo_personalizado TEXT,
     fecha_vencimiento TEXT NOT NULL,
     observaciones TEXT,
+    estado TEXT NOT NULL DEFAULT 'vigente',
+    notified_30 INTEGER NOT NULL DEFAULT 0,
+    notified_15 INTEGER NOT NULL DEFAULT 0,
+    notified_5 INTEGER NOT NULL DEFAULT 0,
+    notified_0 INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
   )`);
 
@@ -93,9 +98,15 @@ async function inicializarBaseDeDatos() {
   await ensureDefaultFamily();
   await db.execute('UPDATE vehicles SET family_id = 1 WHERE family_id IS NULL');
   await migrateColumn('expirations', 'tipo_personalizado', 'TEXT');
+  await migrateColumn('expirations', 'estado', "TEXT NOT NULL DEFAULT 'vigente'");
+  await migrateColumn('expirations', 'notified_30', 'INTEGER NOT NULL DEFAULT 0');
+  await migrateColumn('expirations', 'notified_15', 'INTEGER NOT NULL DEFAULT 0');
+  await migrateColumn('expirations', 'notified_5', 'INTEGER NOT NULL DEFAULT 0');
+  await migrateColumn('expirations', 'notified_0', 'INTEGER NOT NULL DEFAULT 0');
   await migrateColumn('repairs', 'tipo_personalizado', 'TEXT');
   await migrateExpirationsFK();
   await migrateRepairsFK();
+  await initNotificationFlags();
   await ensureTestUser();
 
   console.log('Base de datos inicializada correctamente');
@@ -152,6 +163,31 @@ function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto.scryptSync(password, salt, 64).toString('hex');
   return `${salt}:${hash}`;
+}
+
+function daysUntil(fechaVencimiento) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const exp = new Date(fechaVencimiento);
+  exp.setHours(0, 0, 0, 0);
+  return Math.round((exp - today) / (1000 * 60 * 60 * 24));
+}
+
+async function initNotificationFlags() {
+  try {
+    const rows = await queryAll(
+      'SELECT id, fecha_vencimiento FROM expirations WHERE notified_30 = 0 AND notified_15 = 0 AND notified_5 = 0 AND notified_0 = 0'
+    );
+    for (const row of rows) {
+      const d = daysUntil(row.fecha_vencimiento);
+      await queryRun(
+        'UPDATE expirations SET notified_30 = ?, notified_15 = ?, notified_5 = ?, notified_0 = ? WHERE id = ?',
+        [d < 30 ? 1 : 0, d < 15 ? 1 : 0, d < 5 ? 1 : 0, d < 0 ? 1 : 0, row.id]
+      );
+    }
+  } catch (e) {
+    console.error('Error en initNotificationFlags:', e.message);
+  }
 }
 
 async function ensureTestUser() {

@@ -5,7 +5,7 @@ const { queryOne, queryRun } = require('../db/database');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'garage-manager-secret';
-const TOKEN_EXPIRATION = '8h';
+const TOKEN_EXPIRATION = '30d';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function hashPassword(password) {
