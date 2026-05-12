@@ -74,8 +74,9 @@ const Dashboard = () => {
     .sort((a, b) => new Date(a.fecha_vencimiento) - new Date(b.fecha_vencimiento))[0];
 
   const nextDays = nextExp ? daysUntil(nextExp.fecha_vencimiento) : null;
+  const nextVehicle = nextExp ? vehicles.find(v => v.id === nextExp.vehicle_id) : null;
   const nextLabel = nextExp
-    ? `${nextExp.tipo === 'otro' ? nextExp.tipo_personalizado : TIPO_LABELS[nextExp.tipo]} · ${new Date(nextExp.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}`
+    ? `${nextExp.tipo === 'otro' ? nextExp.tipo_personalizado : TIPO_LABELS[nextExp.tipo]} · ${new Date(nextExp.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}${nextVehicle ? ` · ${nextVehicle.patente}` : ''}`
     : 'Sin vencimientos';
 
   if (loading) {
@@ -89,14 +90,9 @@ const Dashboard = () => {
   return (
     <div>
       {/* Bienvenida */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Buen día, {user?.displayName}</h2>
-          <p className="text-slate-400 text-sm mt-0.5">Familia {user?.familyName}</p>
-        </div>
-        <Link to="/vehicles" className="inline-flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors">
-          + Agregar vehículo
-        </Link>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-slate-900">Buen día, {user?.displayName}</h2>
+        <p className="text-slate-400 text-sm mt-0.5">Familia {user?.familyName}</p>
       </div>
 
       {/* Stats */}
