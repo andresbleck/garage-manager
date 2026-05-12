@@ -7,7 +7,7 @@ const expirationsRoutes = require('./routes/expirations');
 const repairsRoutes = require('./routes/repairs');
 const documentsRoutes = require('./routes/documents');
 const authRoutes = require('./routes/auth');
-const { startNotificationCron } = require('./services/notifications');
+const { startNotificationCron, checkAndSendNotifications } = require('./services/notifications');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -33,6 +33,15 @@ app.use('/api', documentsRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'GarageManager API funcionando correctamente' });
+});
+
+app.post('/api/test-notifications', async (req, res) => {
+  try {
+    await checkAndSendNotifications();
+    res.json({ message: 'Chequeo de notificaciones ejecutado. Revisá los logs del servidor.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.use((err, req, res, next) => {
