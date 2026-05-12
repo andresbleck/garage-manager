@@ -15,7 +15,7 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="min-h-screen bg-slate-50">
-          <Header />
+          <AuthenticatedHeader />
 
           <main className="container mx-auto px-4 py-8">
             <Routes>
@@ -65,63 +65,52 @@ function App() {
   );
 }
 
-const Header = () => {
+const AuthenticatedHeader = () => {
   const { user, logout, isAuthenticated } = useAuth();
+  if (!isAuthenticated) return null;
 
   return (
     <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-700 text-white shadow-2xl">
-      <div className="container mx-auto px-4 py-6 flex flex-col gap-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <div className="container mx-auto px-4 py-5 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">GarageManager</h1>
-            <p className="mt-2 text-sm text-slate-200 max-w-xl">
-              Controla tus vehículos, vencimientos y reparaciones con una experiencia más clara y profesional.
+            <h1 className="text-2xl font-bold tracking-tight">GarageManager</h1>
+            <p className="text-sm text-slate-300 mt-0.5">
+              {user.displayName} · Familia {user.familyName}
             </p>
-            {isAuthenticated && (
-              <p className="mt-3 text-sm text-slate-200">
-                Hola, {user.displayName} · Familia {user.familyName}
-              </p>
-            )}
           </div>
-          <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-center sm:gap-4">
-           
-            {isAuthenticated && (
-              <button
-                type="button"
-                onClick={logout}
-                className="rounded-full px-4 py-2 text-sm font-semibold text-white bg-slate-800/90 hover:bg-slate-700 transition"
-              >
-                Cerrar sesión
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={logout}
+            className="rounded-full px-4 py-2 text-sm font-semibold text-white bg-white/10 hover:bg-white/20 transition"
+          >
+            Cerrar sesión
+          </button>
         </div>
 
-        {isAuthenticated && (
-          <nav className="flex flex-wrap items-center gap-3">
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) =>
-                `rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  isActive ? 'bg-white text-slate-900 shadow-lg' : 'text-slate-200 hover:bg-white/10'
-                }`
-              }
-            >
-              Dashboard
-            </NavLink>
-            <NavLink
-              to="/seguros"
-              className={({ isActive }) =>
-                `rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  isActive ? 'bg-white text-slate-900 shadow-lg' : 'text-slate-200 hover:bg-white/10'
-                }`
-              }
-            >
-              Seguros
-            </NavLink>
-          </nav>
-        )}
+        <nav className="flex flex-wrap items-center gap-2">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              `rounded-full px-4 py-2 text-sm font-semibold transition ${
+                isActive ? 'bg-white text-slate-900 shadow' : 'text-slate-300 hover:bg-white/10'
+              }`
+            }
+          >
+            Dashboard
+          </NavLink>
+          <NavLink
+            to="/seguros"
+            className={({ isActive }) =>
+              `rounded-full px-4 py-2 text-sm font-semibold transition ${
+                isActive ? 'bg-white text-slate-900 shadow' : 'text-slate-300 hover:bg-white/10'
+              }`
+            }
+          >
+            Seguros
+          </NavLink>
+        </nav>
       </div>
     </header>
   );

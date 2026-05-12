@@ -9,33 +9,33 @@ const TIPO_LABELS = {
   otro: 'Otro',
 };
 
-function getExpirationStatus(fechaVencimiento, estado) {
+function getStatusInfo(fechaVencimiento, estado) {
   if (estado === 'regularizado') {
-    return { status: 'regularizado', bgColor: 'bg-teal-100', textColor: 'text-teal-800', text: 'Regularizado' };
+    return {
+      label: 'Regularizado',
+      pill: 'bg-teal-100 text-teal-700',
+      bar: 'bg-teal-400',
+    };
   }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const exp = new Date(fechaVencimiento);
+  const exp = new Date(fechaVencimiento + 'T12:00:00');
   exp.setHours(0, 0, 0, 0);
-  const diffDays = Math.round((exp - today) / (1000 * 60 * 60 * 24));
+  const diff = Math.round((exp - today) / 86400000);
 
-  if (diffDays < 0) {
-    return { status: 'vencido', bgColor: 'bg-red-100', textColor: 'text-red-800', text: 'Vencido' };
-  }
-  if (diffDays === 0) {
-    return { status: 'hoy', bgColor: 'bg-red-100', textColor: 'text-red-800', text: 'Vence hoy' };
-  }
-  if (diffDays <= 5) {
-    return { status: 'urgente', bgColor: 'bg-red-100', textColor: 'text-red-800', text: `Vence en ${diffDays} día${diffDays !== 1 ? 's' : ''}` };
-  }
-  if (diffDays <= 15) {
-    return { status: 'por-vencer', bgColor: 'bg-orange-100', textColor: 'text-orange-800', text: `Vence en ${diffDays} días` };
-  }
-  if (diffDays <= 30) {
-    return { status: 'pronto', bgColor: 'bg-yellow-100', textColor: 'text-yellow-800', text: `Vence en ${diffDays} días` };
-  }
-  return { status: 'ok', bgColor: 'bg-green-100', textColor: 'text-green-800', text: 'Al día' };
+  if (diff < 0)  return { label: 'Vencido',          pill: 'bg-red-100 text-red-700',      bar: 'bg-red-500'     };
+  if (diff === 0) return { label: 'Vence hoy',        pill: 'bg-red-100 text-red-700',      bar: 'bg-red-500'     };
+  if (diff <= 5)  return { label: `${diff}d restantes`, pill: 'bg-red-100 text-red-700',    bar: 'bg-red-400'     };
+  if (diff <= 15) return { label: `${diff}d restantes`, pill: 'bg-orange-100 text-orange-700', bar: 'bg-orange-400' };
+  if (diff <= 30) return { label: `${diff}d restantes`, pill: 'bg-yellow-100 text-yellow-700', bar: 'bg-yellow-400' };
+  return           { label: 'Al día',               pill: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-400' };
+}
+
+function formatDate(fecha) {
+  return new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
 }
 
 const EMPTY_FORM = { tipo: 'seguro', tipo_personalizado: '', fecha_vencimiento: '', observaciones: '' };
@@ -52,8 +52,8 @@ const ExpirationSection = ({ vehicleId }) => {
 
   const fetchExpirations = async () => {
     try {
-      const response = await api.get(`/api/vehicles/${vehicleId}/expirations`);
-      setExpirations(response.data);
+      const { data } = await api.get(`/api/vehicles/${vehicleId}/expirations`);
+      setExpirations(data);
     } catch {
       toast.error('No se pudieron cargar los vencimientos');
     } finally {
@@ -76,19 +76,19 @@ const ExpirationSection = ({ vehicleId }) => {
       }
       resetForm();
     } catch (err) {
-      const msg = err.response?.data?.error || 'Error al guardar el vencimiento';
+      const msg = err.response?.data?.error || 'Error al guardar';
       setError(msg);
       toast.error(msg);
     }
   };
 
-  const handleEdit = (expiration) => {
-    setEditingExpiration(expiration);
+  const handleEdit = (exp) => {
+    setEditingExpiration(exp);
     setFormData({
-      tipo: expiration.tipo,
-      tipo_personalizado: expiration.tipo_personalizado || '',
-      fecha_vencimiento: expiration.fecha_vencimiento,
-      observaciones: expiration.observaciones || '',
+      tipo: exp.tipo,
+      tipo_personalizado: exp.tipo_personalizado || '',
+      fecha_vencimiento: exp.fecha_vencimiento,
+      observaciones: exp.observaciones || '',
     });
     setShowForm(true);
   };
@@ -100,27 +100,27 @@ const ExpirationSection = ({ vehicleId }) => {
       setExpirations(expirations.filter(e => e.id !== id));
       toast.success('Vencimiento eliminado');
     } catch {
-      toast.error('No se pudo eliminar el vencimiento');
+      toast.error('No se pudo eliminar');
     }
   };
 
   const handleRegularizar = async (id) => {
     try {
       const { data } = await api.patch(`/api/expirations/${id}/regularizar`);
-      setExpirations(expirations.map(exp => exp.id === id ? data : exp));
+      setExpirations(expirations.map(e => e.id === id ? data : e));
       toast.success('Marcado como regularizado');
     } catch {
-      toast.error('No se pudo regularizar el vencimiento');
+      toast.error('No se pudo regularizar');
     }
   };
 
   const handleActivar = async (id) => {
     try {
       const { data } = await api.patch(`/api/expirations/${id}/activar`);
-      setExpirations(expirations.map(exp => exp.id === id ? data : exp));
+      setExpirations(expirations.map(e => e.id === id ? data : e));
       toast.info('Vencimiento reactivado');
     } catch {
-      toast.error('No se pudo reactivar el vencimiento');
+      toast.error('No se pudo reactivar');
     }
   };
 
@@ -131,34 +131,36 @@ const ExpirationSection = ({ vehicleId }) => {
     setError(null);
   };
 
-  if (loading) return <div className="text-center py-4 text-slate-500">Cargando vencimientos...</div>;
+  if (loading) return <div className="text-center py-4 text-slate-400 text-sm">Cargando vencimientos...</div>;
 
   return (
-    <div className="bg-white shadow-2xl rounded-3xl p-6 border border-slate-200">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
-        <h3 className="text-xl font-semibold text-slate-900">Vencimientos</h3>
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="text-lg font-bold text-slate-900">Vencimientos</h3>
         <button
           onClick={() => { resetForm(); setShowForm(!showForm); }}
-          className="inline-flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition-colors text-sm"
+          className="inline-flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-700 active:scale-95 transition-all"
         >
-          {showForm ? 'Cerrar formulario' : 'Agregar Vencimiento'}
+          {showForm ? 'Cancelar' : '+ Agregar'}
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-4 text-sm">{error}</div>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl mb-4 text-sm">{error}</div>
       )}
 
+      {/* Formulario */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="mb-6 p-4 bg-slate-50 rounded-3xl border border-slate-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <form onSubmit={handleSubmit} className="mb-5 p-5 bg-slate-50 rounded-2xl border border-slate-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-slate-700 font-medium mb-2 text-sm">Tipo *</label>
+              <label className="block text-slate-600 font-medium mb-1.5 text-xs uppercase tracking-wide">Tipo *</label>
               <select
                 value={formData.tipo}
                 onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-slate-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="w-full px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="seguro">Seguro</option>
                 <option value="vtv">VTV</option>
@@ -172,98 +174,109 @@ const ExpirationSection = ({ vehicleId }) => {
                   onChange={(e) => setFormData({ ...formData, tipo_personalizado: e.target.value })}
                   placeholder="Ej: Cédula verde"
                   required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 mt-2"
+                  className="w-full px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mt-2"
                 />
               )}
             </div>
             <div>
-              <label className="block text-slate-700 font-medium mb-2 text-sm">Fecha de Vencimiento *</label>
+              <label className="block text-slate-600 font-medium mb-1.5 text-xs uppercase tracking-wide">Fecha de vencimiento *</label>
               <input
                 type="date"
                 value={formData.fecha_vencimiento}
                 onChange={(e) => setFormData({ ...formData, fecha_vencimiento: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-slate-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="w-full px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
-
           <div className="mb-4">
-            <label className="block text-slate-700 font-medium mb-2 text-sm">Observaciones</label>
+            <label className="block text-slate-600 font-medium mb-1.5 text-xs uppercase tracking-wide">Observaciones</label>
             <textarea
               value={formData.observaciones}
               onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
               rows="2"
-              className="w-full px-3 py-2 border border-slate-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500"
               placeholder="Notas adicionales..."
+              className="w-full px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition-colors text-sm">
+          <div className="flex gap-2">
+            <button type="submit" className="bg-blue-600 text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors">
               {editingExpiration ? 'Actualizar' : 'Guardar'}
             </button>
-            <button type="button" onClick={resetForm} className="bg-slate-200 text-slate-700 px-4 py-2 rounded-full hover:bg-slate-300 transition-colors text-sm">
+            <button type="button" onClick={resetForm} className="bg-slate-200 text-slate-600 px-5 py-2 rounded-full text-sm font-semibold hover:bg-slate-300 transition-colors">
               Cancelar
             </button>
           </div>
         </form>
       )}
 
+      {/* Lista */}
       {expirations.length === 0 ? (
-        <p className="text-slate-500 text-center py-4">No hay vencimientos registrados</p>
+        <div className="text-center py-8 text-slate-400 text-sm">No hay vencimientos registrados</div>
       ) : (
         <div className="space-y-3">
-          {expirations.map((expiration) => {
-            const statusInfo = getExpirationStatus(expiration.fecha_vencimiento, expiration.estado);
-            const isRegularizado = expiration.estado === 'regularizado';
+          {expirations.map((exp) => {
+            const si = getStatusInfo(exp.fecha_vencimiento, exp.estado);
+            const isRegularizado = exp.estado === 'regularizado';
+            const tipoLabel = exp.tipo === 'otro' ? (exp.tipo_personalizado || 'Otro') : TIPO_LABELS[exp.tipo];
+
             return (
               <div
-                key={expiration.id}
-                className={`border rounded-3xl p-4 shadow-sm ${isRegularizado ? 'bg-teal-50 border-teal-200' : 'bg-slate-50 border-slate-200'}`}
+                key={exp.id}
+                className="group bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200"
               >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="flex-1">
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <span className="font-medium text-slate-900">
-                        {expiration.tipo === 'otro'
-                          ? expiration.tipo_personalizado || 'Otro'
-                          : TIPO_LABELS[expiration.tipo]}
-                      </span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusInfo.bgColor} ${statusInfo.textColor}`}>
-                        {statusInfo.text}
-                      </span>
+                {/* Barra de color superior */}
+                <div className={`h-1 w-full ${si.bar}`} />
+
+                <div className="p-4">
+                  {/* Fila principal */}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-900 text-base leading-tight">{tipoLabel}</p>
+                      <p className="text-slate-400 text-xs mt-0.5">{formatDate(exp.fecha_vencimiento)}</p>
                     </div>
-                    <p className="text-slate-600 text-sm">
-                      Vence: {new Date(expiration.fecha_vencimiento + 'T12:00:00').toLocaleDateString('es-AR')}
-                    </p>
-                    {expiration.observaciones && (
-                      <p className="text-slate-500 text-sm mt-1">{expiration.observaciones}</p>
-                    )}
+                    <span className={`shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${si.pill}`}>
+                      {si.label}
+                    </span>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 sm:flex-col sm:items-end">
+                  {exp.observaciones && (
+                    <p className="text-slate-500 text-sm mb-3 leading-snug">{exp.observaciones}</p>
+                  )}
+
+                  {/* Acciones */}
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                     {isRegularizado ? (
                       <button
-                        onClick={() => handleActivar(expiration.id)}
-                        className="text-slate-500 hover:text-slate-700 text-xs underline"
+                        onClick={() => handleActivar(exp.id)}
+                        className="text-slate-400 hover:text-slate-600 text-xs font-medium transition-colors"
                       >
                         Reactivar
                       </button>
                     ) : (
                       <button
-                        onClick={() => handleRegularizar(expiration.id)}
-                        className="bg-teal-600 text-white px-3 py-1 rounded-full text-xs font-semibold hover:bg-teal-700 transition-colors"
+                        onClick={() => handleRegularizar(exp.id)}
+                        className="inline-flex items-center gap-1.5 bg-teal-600 text-white px-3.5 py-1.5 rounded-full text-xs font-semibold hover:bg-teal-700 active:scale-95 transition-all"
                       >
                         Regularizar
                       </button>
                     )}
-                    <button onClick={() => handleEdit(expiration)} className="text-sky-600 hover:text-sky-800 text-sm">
-                      Editar
-                    </button>
-                    <button onClick={() => handleDelete(expiration.id)} className="text-rose-600 hover:text-rose-800 text-sm">
-                      Eliminar
-                    </button>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleEdit(exp)}
+                        className="text-blue-500 hover:text-blue-700 text-xs font-medium transition-colors"
+                      >
+                        Editar
+                      </button>
+                      <span className="text-slate-200">·</span>
+                      <button
+                        onClick={() => handleDelete(exp.id)}
+                        className="text-slate-400 hover:text-red-500 text-xs font-medium transition-colors"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
