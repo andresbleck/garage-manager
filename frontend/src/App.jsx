@@ -16,7 +16,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen bg-[#0d1117] text-slate-100">
           <AuthenticatedHeader />
           <main className="container mx-auto px-4 py-8">
             <Routes>
@@ -31,7 +31,15 @@ function App() {
               <Route path="/edit-vehicle/:id" element={<RequireAuth><AddVehicle /></RequireAuth>} />
             </Routes>
           </main>
-          <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover theme="colored" />
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            pauseOnHover
+            theme="dark"
+          />
         </div>
       </Router>
     </AuthProvider>
@@ -49,30 +57,57 @@ const AuthenticatedHeader = () => {
   if (!isAuthenticated) return null;
 
   return (
-    <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-700 text-white shadow-2xl">
-      <div className="container mx-auto px-4 py-5 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+    <header className="sticky top-0 z-50 border-b border-slate-800 bg-[#0d1117]/90 backdrop-blur-md">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">GarageManager</h1>
-            <p className="text-sm text-slate-300 mt-0.5">{user.displayName} · Familia {user.familyName}</p>
+            <span className="font-bold text-white tracking-tight text-lg">GarageManager</span>
+            <p className="text-[11px] text-slate-500 leading-none mt-0.5">{user.displayName} · {user.familyName}</p>
           </div>
+
+          {/* Nav */}
+          <nav className="hidden sm:flex items-center gap-1">
+            {NAV_LINKS.map(({ to, label, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  `px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                    isActive
+                      ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
+                  }`
+                }
+              >
+                {label}
+              </NavLink>
+            ))}
+          </nav>
+
+          {/* Logout */}
           <button
             type="button"
             onClick={logout}
-            className="rounded-full px-4 py-2 text-sm font-semibold text-white bg-white/10 hover:bg-white/20 transition"
+            className="text-sm font-medium text-slate-400 hover:text-red-400 transition-colors px-3 py-2 rounded-lg hover:bg-slate-800"
           >
-            Cerrar sesión
+            Salir
           </button>
         </div>
-        <nav className="flex flex-wrap items-center gap-2">
+
+        {/* Mobile nav */}
+        <nav className="flex sm:hidden items-center gap-1 pb-3 overflow-x-auto">
           {NAV_LINKS.map(({ to, label, end }) => (
             <NavLink
               key={to}
               to={to}
               end={end}
               className={({ isActive }) =>
-                `rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  isActive ? 'bg-white text-slate-900 shadow' : 'text-slate-300 hover:bg-white/10'
+                `px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                  isActive
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
                 }`
               }
             >

@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -25,9 +24,9 @@ const IconUsers = () => (
 
 const FEATURES = [
   { Icon: IconCalendar, title: 'Control de vencimientos', desc: 'Seguro, VTV, matafuegos y más. Recordatorios automáticos antes de que venzan.' },
-  { Icon: IconWrench, title: 'Historial de reparaciones', desc: 'Registrá cada intervención con fecha, costo y kilometraje.' },
-  { Icon: IconFile, title: 'Gestión de documentos', desc: 'Guardá PDFs y fotos del seguro, cédula verde o cualquier documento.' },
-  { Icon: IconUsers, title: 'Cuenta familiar', desc: 'Una sola cuenta accesible desde cualquier dispositivo de la familia.' },
+  { Icon: IconWrench,   title: 'Historial de reparaciones', desc: 'Registrá cada intervención con fecha, costo y kilometraje.' },
+  { Icon: IconFile,     title: 'Gestión de documentos', desc: 'Guardá PDFs y fotos del seguro, cédula verde o cualquier documento.' },
+  { Icon: IconUsers,    title: 'Cuenta familiar', desc: 'Una sola cuenta accesible desde cualquier dispositivo de la familia.' },
 ];
 
 const Home = () => {
@@ -45,59 +44,51 @@ const Home = () => {
         }
         .anim-1 { animation: fadeUp 0.6s ease forwards; }
         .anim-2 { animation: fadeUp 0.6s ease 0.1s forwards; opacity: 0; }
-        .anim-3 { animation: fadeUp 0.6s ease 0.2s forwards; opacity: 0; }
-        .anim-4 { animation: fadeUp 0.6s ease 0.35s forwards; opacity: 0; }
-        .anim-5 { animation: fadeUp 0.6s ease 0.45s forwards; opacity: 0; }
+        .anim-3 { animation: fadeUp 0.6s ease 0.25s forwards; opacity: 0; }
+        .anim-4 { animation: fadeUp 0.6s ease 0.4s forwards; opacity: 0; }
       `}</style>
 
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-slate-50 via-white to-blue-50" />
-        <div className="absolute -top-40 -right-40 -z-10 w-96 h-96 rounded-full bg-blue-100/50 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 -z-10 w-96 h-96 rounded-full bg-slate-100/70 blur-3xl" />
+      <div className="max-w-4xl mx-auto pt-10 pb-16 px-4 text-center">
 
-        <div className="max-w-4xl mx-auto pt-10 pb-16 px-4 text-center">
-          {/* Título principal con animación */}
-          <h1 className="anim-1 text-6xl sm:text-7xl font-extrabold text-slate-900 tracking-tight mb-4">
-            Garage<span className="text-blue-600">Manager</span>
-          </h1>
+        {/* Título */}
+        <h1 className="anim-1 text-6xl sm:text-7xl font-extrabold text-white tracking-tight mb-6">
+          Garage<span className="text-blue-500">Manager</span>
+        </h1>
 
-          <div className="anim-2 inline-flex items-center gap-2 bg-blue-50 border border-blue-100 text-blue-600 text-xs font-semibold px-4 py-1.5 rounded-full mb-6 tracking-wide uppercase">
-            Gestión vehicular familiar
-          </div>
+        <p className="anim-2 text-lg text-slate-400 max-w-xl mx-auto mb-10 leading-relaxed">
+          Vencimientos, reparaciones y documentos de todos los autos de la familia en un solo lugar, con recordatorios automáticos.
+        </p>
 
-          <p className="anim-3 text-lg text-slate-500 max-w-xl mx-auto mb-10 leading-relaxed">
-            Vencimientos, reparaciones y documentos de todos los autos de la familia en un solo lugar, con recordatorios automáticos.
-          </p>
+        {/* Botones */}
+        <div className="anim-3 flex flex-col sm:flex-row gap-3 justify-center mb-16">
+          <Link
+            to="/register"
+            className="inline-flex items-center justify-center bg-blue-600 text-white px-8 py-3.5 rounded-xl text-sm font-semibold hover:bg-blue-500 active:scale-95 transition-all shadow-lg shadow-blue-500/25"
+          >
+            Crear cuenta familiar
+          </Link>
+          <Link
+            to="/login"
+            className="inline-flex items-center justify-center bg-slate-800 text-slate-200 border border-slate-700 px-8 py-3.5 rounded-xl text-sm font-semibold hover:bg-slate-700 hover:text-white active:scale-95 transition-all"
+          >
+            Iniciar sesión
+          </Link>
+        </div>
 
-          <div className="anim-4 flex flex-col sm:flex-row gap-3 justify-center mb-16">
-            <Link
-              to="/register"
-              className="inline-flex items-center justify-center bg-blue-600 text-white px-8 py-3.5 rounded-full text-sm font-semibold hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-500/25"
+        {/* Features */}
+        <div className="anim-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+          {FEATURES.map(({ Icon, title, desc }) => (
+            <div
+              key={title}
+              className="group bg-slate-900 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-all duration-200"
             >
-              Crear cuenta familiar
-            </Link>
-            <Link
-              to="/login"
-              className="inline-flex items-center justify-center bg-white text-slate-700 border border-slate-200 px-8 py-3.5 rounded-full text-sm font-semibold hover:bg-slate-50 hover:border-slate-300 active:scale-95 transition-all shadow-sm"
-            >
-              Iniciar sesión
-            </Link>
-          </div>
-
-          <div className="anim-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-            {FEATURES.map(({ Icon, title, desc }) => (
-              <div
-                key={title}
-                className="group bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-blue-100 transition-all duration-200"
-              >
-                <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-blue-50 text-blue-600 mb-3 group-hover:bg-blue-100 transition-colors">
-                  <Icon />
-                </div>
-                <h3 className="font-semibold text-slate-900 mb-1">{title}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
+              <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-blue-500/15 text-blue-400 mb-3 group-hover:bg-blue-500/20 transition-colors">
+                <Icon />
               </div>
-            ))}
-          </div>
+              <h3 className="font-semibold text-white mb-1">{title}</h3>
+              <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
+            </div>
+          ))}
         </div>
       </div>
     </>

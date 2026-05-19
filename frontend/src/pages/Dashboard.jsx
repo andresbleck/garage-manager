@@ -14,19 +14,19 @@ function daysUntil(fecha) {
 }
 
 function getExpPill(days) {
-  if (days < 0)  return { label: 'Vencido',      cls: 'bg-red-100 text-red-700',       dot: 'bg-red-500'     };
-  if (days === 0) return { label: 'Hoy',          cls: 'bg-red-100 text-red-700',       dot: 'bg-red-500'     };
-  if (days <= 5)  return { label: `${days}d`,     cls: 'bg-red-100 text-red-700',       dot: 'bg-red-400'     };
-  if (days <= 15) return { label: `${days}d`,     cls: 'bg-orange-100 text-orange-700', dot: 'bg-orange-400'  };
-  if (days <= 30) return { label: `${days}d`,     cls: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-400'  };
-  return               { label: `${days}d`,       cls: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-400' };
+  if (days < 0)   return { label: 'Vencido', cls: 'bg-red-500/15 text-red-400 border-red-500/20',              dot: 'bg-red-400'     };
+  if (days === 0) return { label: 'Hoy',     cls: 'bg-red-500/15 text-red-400 border-red-500/20',              dot: 'bg-red-400'     };
+  if (days <= 5)  return { label: `${days}d`, cls: 'bg-red-500/15 text-red-400 border-red-500/20',             dot: 'bg-red-400'     };
+  if (days <= 15) return { label: `${days}d`, cls: 'bg-amber-500/15 text-amber-400 border-amber-500/20',       dot: 'bg-amber-400'   };
+  if (days <= 30) return { label: `${days}d`, cls: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20',    dot: 'bg-yellow-400'  };
+  return               { label: `${days}d`,   cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-400' };
 }
 
-const StatCard = ({ label, value, sub, accent }) => (
-  <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col gap-1 border-l-4 ${accent}`}>
-    <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{label}</p>
-    <p className="text-3xl font-extrabold text-slate-900">{value}</p>
-    <p className="text-xs text-slate-500">{sub}</p>
+const StatCard = ({ label, value, sub, accentBorder, valueClass }) => (
+  <div className={`rounded-2xl bg-slate-900 border border-slate-800 border-l-4 ${accentBorder} p-5 flex flex-col gap-2 hover:border-r-slate-700 hover:border-t-slate-700 hover:border-b-slate-700 transition-colors duration-200`}>
+    <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{label}</p>
+    <p className={`text-3xl font-extrabold ${valueClass}`}>{value}</p>
+    <p className="text-xs text-slate-500 leading-tight">{sub}</p>
   </div>
 );
 
@@ -48,7 +48,6 @@ const Dashboard = () => {
       const vs = vRes.data;
       setVehicles(vs);
       setDocsByVehicle(docsRes.data);
-
       const expResults = await Promise.all(
         vs.map(v => api.get(`/api/vehicles/${v.id}/expirations`).then(r => ({ id: v.id, exps: r.data })))
       );
@@ -62,7 +61,6 @@ const Dashboard = () => {
     }
   };
 
-  // Stats
   const allExps = Object.values(expByVehicle).flat();
   const vigentes = allExps.filter(e => e.estado === 'vigente');
   const alerts = vigentes.filter(e => daysUntil(e.fecha_vencimiento) <= 30);
@@ -72,7 +70,6 @@ const Dashboard = () => {
   const nextExp = vigentes
     .filter(e => daysUntil(e.fecha_vencimiento) >= 0)
     .sort((a, b) => new Date(a.fecha_vencimiento) - new Date(b.fecha_vencimiento))[0];
-
   const nextDays = nextExp ? daysUntil(nextExp.fecha_vencimiento) : null;
   const nextVehicle = nextExp ? vehicles.find(v => v.id === nextExp.vehicle_id) : null;
   const nextLabel = nextExp
@@ -82,123 +79,170 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="rounded-2xl bg-white px-8 py-6 shadow-xl border border-slate-100 text-base font-medium text-slate-500">Cargando...</div>
+        <div className="flex items-center gap-3 text-slate-400">
+          <div className="w-5 h-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+          Cargando...
+        </div>
       </div>
     );
   }
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
+
   return (
-    <div>
+    <div className="max-w-5xl mx-auto space-y-8">
+
       {/* Bienvenida */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">Buen día, {user?.displayName}</h2>
-        <p className="text-slate-400 text-sm mt-0.5">Familia {user?.familyName}</p>
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="text-slate-500 text-sm font-medium mb-1">{greeting}</p>
+          <h2 className="text-3xl font-extrabold text-white tracking-tight">{user?.displayName}</h2>
+          <p className="text-slate-500 text-sm mt-1">Familia <span className="text-slate-400 font-medium">{user?.familyName}</span></p>
+        </div>
+        <p className="hidden sm:block text-xs text-slate-600 uppercase tracking-widest">
+          {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Vehículos" value={vehicles.length} sub="En tu garage" accent="border-l-blue-400" />
-        <StatCard label="Documentos" value={totalDocs} sub="Archivados" accent="border-l-slate-400" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Alertas activas"
-          value={alerts.length}
-          sub={alerts.length === 0 ? 'Todo en orden' : `${vencidos.length} vencido${vencidos.length !== 1 ? 's' : ''}, ${alerts.length - vencidos.length} próximo${alerts.length - vencidos.length !== 1 ? 's' : ''}`}
-          accent={alerts.length > 0 ? 'border-l-red-400' : 'border-l-emerald-400'}
+          label="Vehículos"
+          value={vehicles.length}
+          sub="En tu garage"
+          accentBorder="border-l-blue-500"
+          valueClass="text-blue-400"
         />
         <StatCard
-          label="Próximo vencimiento"
+          label="Documentos"
+          value={totalDocs}
+          sub="Archivados"
+          accentBorder="border-l-slate-500"
+          valueClass="text-slate-300"
+        />
+        <StatCard
+          label="Alertas"
+          value={alerts.length}
+          sub={alerts.length === 0
+            ? 'Todo en orden'
+            : `${vencidos.length} vencido${vencidos.length !== 1 ? 's' : ''}, ${alerts.length - vencidos.length} próximo${alerts.length - vencidos.length !== 1 ? 's' : ''}`}
+          accentBorder={alerts.length > 0 ? 'border-l-red-500' : 'border-l-emerald-500'}
+          valueClass={alerts.length > 0 ? 'text-red-400' : 'text-emerald-400'}
+        />
+        <StatCard
+          label="Próximo"
           value={nextDays !== null ? `${nextDays}d` : '—'}
           sub={nextLabel}
-          accent="border-l-orange-400"
+          accentBorder="border-l-orange-500"
+          valueClass="text-orange-400"
         />
       </div>
 
-      {/* Vehículos con resumen */}
-      {vehicles.length === 0 ? (
-        <div className="max-w-3xl mx-auto rounded-2xl bg-white p-12 text-center border border-slate-100 shadow-sm">
-          <p className="text-slate-400 mb-4">No tenés vehículos registrados</p>
-          <Link to="/vehicles" className="inline-flex items-center bg-blue-600 text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors">
-            Agregar vehículo
+      {/* Vehículos */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-500">Tus vehículos</h3>
+          <Link to="/vehicles" className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors">
+            Ver todos →
           </Link>
         </div>
-      ) : (
-        <div className="max-w-3xl mx-auto space-y-4">
-          <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-400">Tus vehículos</h3>
-          {vehicles.map(v => {
-            const exps = expByVehicle[v.id] || [];
-            const vigenteExps = exps.filter(e => e.estado === 'vigente');
-            const alertExps = vigenteExps.filter(e => daysUntil(e.fecha_vencimiento) <= 30);
-            const hasProblems = alertExps.some(e => daysUntil(e.fecha_vencimiento) < 0);
 
-            return (
-              <div key={v.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200">
-                {alertExps.length > 0 && (
-                  <div className={`h-1 w-full ${hasProblems ? 'bg-red-500' : 'bg-yellow-400'}`} />
-                )}
+        {vehicles.length === 0 ? (
+          <div className="rounded-2xl bg-slate-900 border border-dashed border-slate-700 p-12 text-center">
+            <p className="text-slate-400 mb-5 text-sm">No tenés vehículos registrados</p>
+            <Link to="/vehicles" className="inline-flex items-center bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20">
+              Agregar vehículo
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {vehicles.map(v => {
+              const exps = expByVehicle[v.id] || [];
+              const vigenteExps = exps.filter(e => e.estado === 'vigente');
+              const alertExps = vigenteExps.filter(e => daysUntil(e.fecha_vencimiento) <= 30);
+              const hasProblems = alertExps.some(e => daysUntil(e.fecha_vencimiento) < 0);
 
-                <div className="p-5">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-lg leading-tight">{v.marca} {v.modelo}</h4>
-                      <p className="text-slate-400 text-sm">{v.patente} · {v.año}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {docsByVehicle[v.id] > 0 && (
-                        <div className="text-center">
-                          <p className="text-[10px] text-slate-400 uppercase tracking-wide">Docs</p>
-                          <p className="text-sm font-bold text-slate-700">{docsByVehicle[v.id]}</p>
-                        </div>
-                      )}
-                      <Link
-                        to={`/vehicle/${v.id}`}
-                        className="inline-flex items-center bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold hover:bg-blue-700 transition-colors"
-                      >
-                        Ver detalles
-                      </Link>
-                    </div>
-                  </div>
-
-                  {/* Vencimientos activos */}
-                  {vigenteExps.length === 0 ? (
-                    <p className="text-slate-400 text-xs">Sin vencimientos registrados</p>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {vigenteExps.map(exp => {
-                        const days = daysUntil(exp.fecha_vencimiento);
-                        const pill = getExpPill(days);
-                        const label = exp.tipo === 'otro' ? (exp.tipo_personalizado || 'Otro') : TIPO_LABELS[exp.tipo];
-                        return (
-                          <div key={exp.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
-                            <div className="flex items-center gap-2">
-                              <span className={`w-2 h-2 rounded-full shrink-0 ${pill.dot}`} />
-                              <span className="text-sm font-medium text-slate-700">{label}</span>
-                            </div>
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${pill.cls}`}>
-                              {pill.label}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Alertas */}
+              return (
+                <div
+                  key={v.id}
+                  className="group rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden hover:border-slate-700 transition-all duration-200 hover:shadow-xl hover:shadow-black/20"
+                >
                   {alertExps.length > 0 && (
-                    <div className={`mt-3 rounded-xl px-4 py-2.5 flex items-center justify-between ${hasProblems ? 'bg-red-50 border border-red-100' : 'bg-yellow-50 border border-yellow-100'}`}>
-                      <p className={`text-xs font-semibold ${hasProblems ? 'text-red-700' : 'text-yellow-700'}`}>
-                        {alertExps.length} alerta{alertExps.length !== 1 ? 's' : ''} activa{alertExps.length !== 1 ? 's' : ''}
-                      </p>
-                      <Link to={`/vehicle/${v.id}`} className={`text-xs font-semibold underline ${hasProblems ? 'text-red-600' : 'text-yellow-600'}`}>
-                        Resolver
-                      </Link>
-                    </div>
+                    <div className={`h-0.5 w-full ${hasProblems ? 'bg-gradient-to-r from-red-500 to-red-400' : 'bg-gradient-to-r from-amber-500 to-yellow-400'}`} />
                   )}
+
+                  <div className="p-5">
+                    <div className="flex items-center justify-between mb-4 gap-4">
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-white text-base leading-tight truncate">{v.marca} {v.modelo}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[11px] font-mono font-semibold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">{v.patente}</span>
+                          <span className="text-xs text-slate-500">{v.año}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {docsByVehicle[v.id] > 0 && (
+                          <div className="text-center bg-slate-800 rounded-lg px-2.5 py-1.5">
+                            <p className="text-[9px] text-slate-500 uppercase tracking-wide leading-none mb-0.5">Docs</p>
+                            <p className="text-sm font-bold text-slate-300">{docsByVehicle[v.id]}</p>
+                          </div>
+                        )}
+                        <Link
+                          to={`/vehicle/${v.id}`}
+                          className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-blue-500 transition-colors shadow-sm shadow-blue-500/20"
+                        >
+                          Ver detalles
+                        </Link>
+                      </div>
+                    </div>
+
+                    {vigenteExps.length === 0 ? (
+                      <p className="text-slate-600 text-xs">Sin vencimientos registrados</p>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                        {vigenteExps.map(exp => {
+                          const days = daysUntil(exp.fecha_vencimiento);
+                          const pill = getExpPill(days);
+                          const label = exp.tipo === 'otro' ? (exp.tipo_personalizado || 'Otro') : TIPO_LABELS[exp.tipo];
+                          return (
+                            <div key={exp.id} className={`flex items-center justify-between rounded-xl px-3 py-2 border ${pill.cls}`}>
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${pill.dot}`} />
+                                <span className="text-xs font-medium truncate">{label}</span>
+                              </div>
+                              <span className="text-xs font-bold ml-2 shrink-0">{pill.label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {alertExps.length > 0 && (
+                      <div className={`mt-3 rounded-xl px-4 py-2.5 flex items-center justify-between ${
+                        hasProblems
+                          ? 'bg-red-500/10 border border-red-500/20'
+                          : 'bg-amber-500/10 border border-amber-500/20'
+                      }`}>
+                        <p className={`text-xs font-semibold ${hasProblems ? 'text-red-400' : 'text-amber-400'}`}>
+                          {alertExps.length} alerta{alertExps.length !== 1 ? 's' : ''} activa{alertExps.length !== 1 ? 's' : ''}
+                        </p>
+                        <Link
+                          to={`/vehicle/${v.id}`}
+                          className={`text-xs font-semibold hover:underline ${hasProblems ? 'text-red-400' : 'text-amber-400'}`}
+                        >
+                          Resolver →
+                        </Link>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
