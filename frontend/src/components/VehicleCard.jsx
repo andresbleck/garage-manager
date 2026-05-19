@@ -61,20 +61,20 @@ const VehicleCard = ({ vehicle, onDelete, insuranceDocsCount = 0 }) => {
           alertCount > 0 ? (
             <div className={`rounded-xl px-4 py-3 border ${
               hasVencido
-                ? 'bg-red-500/10 border-red-500/20 text-red-400'
-                : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                ? 'bg-red-500/10 border-red-500/30'
+                : 'bg-amber-500/10 border-amber-500/30'
             }`}>
-              <p className="text-xs font-semibold">
+              <p className="text-xs font-semibold text-slate-300">
                 {hasVencido ? 'Atención requerida' : 'Próximos vencimientos'}
               </p>
-              <p className="text-xs opacity-70 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 {alertCount} vencimiento{alertCount !== 1 ? 's' : ''} {hasVencido ? 'con problemas' : 'próximos'}
               </p>
             </div>
           ) : (
-            <div className="rounded-xl px-4 py-3 bg-emerald-500/10 border border-emerald-500/20">
-              <p className="text-xs font-semibold text-emerald-400">Todo en orden</p>
-              <p className="text-xs text-emerald-400/60 mt-0.5">Sin vencimientos próximos</p>
+            <div className="rounded-xl px-4 py-3 bg-emerald-500/10 border border-emerald-500/30">
+              <p className="text-xs font-semibold text-slate-300">Todo en orden</p>
+              <p className="text-xs text-slate-500 mt-0.5">Sin vencimientos próximos</p>
             </div>
           )
         )}

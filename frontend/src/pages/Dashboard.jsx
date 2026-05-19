@@ -14,12 +14,12 @@ function daysUntil(fecha) {
 }
 
 function getExpPill(days) {
-  if (days < 0)   return { label: 'Vencido', cls: 'bg-red-500/15 text-red-400 border-red-500/20',              dot: 'bg-red-400'     };
-  if (days === 0) return { label: 'Hoy',     cls: 'bg-red-500/15 text-red-400 border-red-500/20',              dot: 'bg-red-400'     };
-  if (days <= 5)  return { label: `${days}d`, cls: 'bg-red-500/15 text-red-400 border-red-500/20',             dot: 'bg-red-400'     };
-  if (days <= 15) return { label: `${days}d`, cls: 'bg-amber-500/15 text-amber-400 border-amber-500/20',       dot: 'bg-amber-400'   };
-  if (days <= 30) return { label: `${days}d`, cls: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20',    dot: 'bg-yellow-400'  };
-  return               { label: `${days}d`,   cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-400' };
+  if (days < 0)   return { label: 'Vencido', cls: 'bg-red-500/10 text-slate-200 border-red-500/40',     dot: 'bg-red-500'     };
+  if (days === 0) return { label: 'Hoy',     cls: 'bg-red-500/10 text-slate-200 border-red-500/40',     dot: 'bg-red-500'     };
+  if (days <= 5)  return { label: `${days}d`, cls: 'bg-red-500/10 text-slate-200 border-red-500/40',    dot: 'bg-red-400'     };
+  if (days <= 15) return { label: `${days}d`, cls: 'bg-amber-500/10 text-slate-200 border-amber-500/40', dot: 'bg-amber-400'  };
+  if (days <= 30) return { label: `${days}d`, cls: 'bg-yellow-500/10 text-slate-200 border-yellow-500/40', dot: 'bg-yellow-400' };
+  return               { label: `${days}d`,   cls: 'bg-slate-800 text-slate-300 border-slate-700',       dot: 'bg-emerald-500' };
 }
 
 const StatCard = ({ label, value, sub, accentBorder, valueClass }) => (
@@ -220,17 +220,17 @@ const Dashboard = () => {
                     )}
 
                     {alertExps.length > 0 && (
-                      <div className={`mt-3 rounded-xl px-4 py-2.5 flex items-center justify-between ${
+                      <div className={`mt-3 rounded-xl px-4 py-2.5 flex items-center justify-between border ${
                         hasProblems
-                          ? 'bg-red-500/10 border border-red-500/20'
-                          : 'bg-amber-500/10 border border-amber-500/20'
+                          ? 'bg-red-500/10 border-red-500/30'
+                          : 'bg-amber-500/10 border-amber-500/30'
                       }`}>
-                        <p className={`text-xs font-semibold ${hasProblems ? 'text-red-400' : 'text-amber-400'}`}>
+                        <p className="text-xs font-semibold text-slate-300">
                           {alertExps.length} alerta{alertExps.length !== 1 ? 's' : ''} activa{alertExps.length !== 1 ? 's' : ''}
                         </p>
                         <Link
                           to={`/vehicle/${v.id}`}
-                          className={`text-xs font-semibold hover:underline ${hasProblems ? 'text-red-400' : 'text-amber-400'}`}
+                          className="text-xs font-semibold text-slate-400 hover:text-slate-200 hover:underline transition-colors"
                         >
                           Resolver →
                         </Link>
