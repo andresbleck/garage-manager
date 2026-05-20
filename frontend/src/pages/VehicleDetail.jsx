@@ -11,9 +11,7 @@ const VehicleDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchVehicle();
-  }, [id]);
+  useEffect(() => { fetchVehicle(); }, [id]);
 
   const fetchVehicle = async () => {
     try {
@@ -30,49 +28,52 @@ const VehicleDetail = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="text-lg">Cargando vehículo...</div>
+        <div className="flex items-center gap-3 text-slate-400">
+          <div className="w-5 h-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+          Cargando vehículo...
+        </div>
       </div>
     );
   }
 
   if (error || !vehicle) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+      <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm">
         {error || 'Vehículo no encontrado'}
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="mb-6">
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div>
         <button
           onClick={() => navigate('/')}
-          className="mb-4 text-blue-600 hover:text-blue-800 font-medium text-sm"
+          className="mb-4 text-slate-500 hover:text-slate-300 font-medium text-sm transition-colors"
         >
-          ← Volver a vehículos
+          ← Volver
         </button>
 
-        <div className="bg-white shadow-2xl rounded-3xl p-6 border border-slate-200">
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-3xl font-semibold text-slate-900 mb-1">
+              <h2 className="text-3xl font-bold text-white tracking-tight mb-1">
                 {vehicle.marca} {vehicle.modelo}
               </h2>
-              <p className="text-lg text-slate-600 mb-1">{vehicle.patente}</p>
+              <span className="inline-block text-sm font-mono font-semibold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded mb-1">{vehicle.patente}</span>
               <p className="text-slate-500 text-sm">Año {vehicle.año}</p>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => navigate(`/edit-vehicle/${vehicle.id}`)}
-                className="px-4 py-2 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors text-sm"
+                className="px-4 py-2 rounded-xl border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors text-sm font-medium"
               >
                 Editar
               </button>
               <Link
                 to="/seguros"
-                className="px-4 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm"
+                className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-500 transition-colors text-sm font-semibold shadow-sm shadow-blue-500/20"
               >
                 Ver seguros
               </Link>
@@ -84,10 +85,8 @@ const VehicleDetail = () => {
               <img
                 src={vehicle.foto_url}
                 alt={`${vehicle.marca} ${vehicle.modelo}`}
-                className="w-full h-64 object-cover rounded-2xl"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                }}
+                className="w-full h-64 object-cover rounded-xl"
+                onError={(e) => { e.target.style.display = 'none'; }}
               />
             </div>
           )}

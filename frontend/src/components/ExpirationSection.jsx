@@ -2,21 +2,14 @@ import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import api from '../api';
 
-const TIPO_LABELS = {
-  seguro: 'Seguro',
-  vtv: 'VTV',
-  matafuegos: 'Matafuegos',
-  otro: 'Otro',
-};
+const TIPO_LABELS = { seguro: 'Seguro', vtv: 'VTV', matafuegos: 'Matafuegos', otro: 'Otro' };
 
 function getStatusInfo(fechaVencimiento, estado) {
-  if (estado === 'regularizado') {
-    return {
-      label: 'Regularizado',
-      pill: 'bg-teal-100 text-teal-700',
-      bar: 'bg-teal-400',
-    };
-  }
+  if (estado === 'regularizado') return {
+    label: 'Regularizado',
+    pill: 'bg-teal-500/10 text-slate-200 border-teal-500/30',
+    bar: 'bg-teal-500',
+  };
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -24,12 +17,12 @@ function getStatusInfo(fechaVencimiento, estado) {
   exp.setHours(0, 0, 0, 0);
   const diff = Math.round((exp - today) / 86400000);
 
-  if (diff < 0)  return { label: 'Vencido',          pill: 'bg-red-100 text-red-700',      bar: 'bg-red-500'     };
-  if (diff === 0) return { label: 'Vence hoy',        pill: 'bg-red-100 text-red-700',      bar: 'bg-red-500'     };
-  if (diff <= 5)  return { label: `${diff}d restantes`, pill: 'bg-red-100 text-red-700',    bar: 'bg-red-400'     };
-  if (diff <= 15) return { label: `${diff}d restantes`, pill: 'bg-orange-100 text-orange-700', bar: 'bg-orange-400' };
-  if (diff <= 30) return { label: `${diff}d restantes`, pill: 'bg-yellow-100 text-yellow-700', bar: 'bg-yellow-400' };
-  return           { label: 'Al día',               pill: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-400' };
+  if (diff < 0)   return { label: 'Vencido',           pill: 'bg-red-500/10 text-slate-200 border-red-500/40',    bar: 'bg-red-500'    };
+  if (diff === 0) return { label: 'Vence hoy',          pill: 'bg-red-500/10 text-slate-200 border-red-500/40',    bar: 'bg-red-500'    };
+  if (diff <= 5)  return { label: `${diff}d restantes`, pill: 'bg-red-500/10 text-slate-200 border-red-500/40',    bar: 'bg-red-400'    };
+  if (diff <= 15) return { label: `${diff}d restantes`, pill: 'bg-amber-500/10 text-slate-200 border-amber-500/40', bar: 'bg-amber-400' };
+  if (diff <= 30) return { label: `${diff}d restantes`, pill: 'bg-yellow-500/10 text-slate-200 border-yellow-500/40', bar: 'bg-yellow-400' };
+  return           { label: 'Al día',                   pill: 'bg-slate-800 text-slate-300 border-slate-700',      bar: 'bg-emerald-500' };
 }
 
 function formatDate(fecha) {
@@ -37,6 +30,9 @@ function formatDate(fecha) {
     day: '2-digit', month: 'short', year: 'numeric',
   });
 }
+
+const inputCls = 'w-full px-3 py-2.5 border border-slate-700 bg-slate-800 text-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-500';
+const labelCls = 'block text-slate-500 font-medium mb-1.5 text-xs uppercase tracking-wide';
 
 const EMPTY_FORM = { tipo: 'seguro', tipo_personalizado: '', fecha_vencimiento: '', observaciones: '' };
 
@@ -131,36 +127,34 @@ const ExpirationSection = ({ vehicleId }) => {
     setError(null);
   };
 
-  if (loading) return <div className="text-center py-4 text-slate-400 text-sm">Cargando vencimientos...</div>;
+  if (loading) return <div className="text-center py-4 text-slate-500 text-sm">Cargando vencimientos...</div>;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-      {/* Header */}
+    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6">
       <div className="flex items-center justify-between mb-5">
-        <h3 className="text-lg font-bold text-slate-900">Vencimientos</h3>
+        <h3 className="text-lg font-bold text-white">Vencimientos</h3>
         <button
           onClick={() => { resetForm(); setShowForm(!showForm); }}
-          className="inline-flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-700 active:scale-95 transition-all"
+          className="inline-flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-500 active:scale-95 transition-all"
         >
           {showForm ? 'Cancelar' : '+ Agregar'}
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl mb-4 text-sm">{error}</div>
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-3 py-2 rounded-xl mb-4 text-sm">{error}</div>
       )}
 
-      {/* Formulario */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="mb-5 p-5 bg-slate-50 rounded-2xl border border-slate-200">
+        <form onSubmit={handleSubmit} className="mb-5 p-5 bg-slate-800/50 rounded-2xl border border-slate-700">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-slate-600 font-medium mb-1.5 text-xs uppercase tracking-wide">Tipo *</label>
+              <label className={labelCls}>Tipo *</label>
               <select
                 value={formData.tipo}
                 onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
                 required
-                className="w-full px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={inputCls}
               >
                 <option value="seguro">Seguro</option>
                 <option value="vtv">VTV</option>
@@ -174,45 +168,44 @@ const ExpirationSection = ({ vehicleId }) => {
                   onChange={(e) => setFormData({ ...formData, tipo_personalizado: e.target.value })}
                   placeholder="Ej: Cédula verde"
                   required
-                  className="w-full px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mt-2"
+                  className={`${inputCls} mt-2`}
                 />
               )}
             </div>
             <div>
-              <label className="block text-slate-600 font-medium mb-1.5 text-xs uppercase tracking-wide">Fecha de vencimiento *</label>
+              <label className={labelCls}>Fecha de vencimiento *</label>
               <input
                 type="date"
                 value={formData.fecha_vencimiento}
                 onChange={(e) => setFormData({ ...formData, fecha_vencimiento: e.target.value })}
                 required
-                className="w-full px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={inputCls}
               />
             </div>
           </div>
           <div className="mb-4">
-            <label className="block text-slate-600 font-medium mb-1.5 text-xs uppercase tracking-wide">Observaciones</label>
+            <label className={labelCls}>Observaciones</label>
             <textarea
               value={formData.observaciones}
               onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
               rows="2"
               placeholder="Notas adicionales..."
-              className="w-full px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className={`${inputCls} resize-none`}
             />
           </div>
           <div className="flex gap-2">
-            <button type="submit" className="bg-blue-600 text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors">
+            <button type="submit" className="bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-blue-500 transition-colors">
               {editingExpiration ? 'Actualizar' : 'Guardar'}
             </button>
-            <button type="button" onClick={resetForm} className="bg-slate-200 text-slate-600 px-5 py-2 rounded-full text-sm font-semibold hover:bg-slate-300 transition-colors">
+            <button type="button" onClick={resetForm} className="bg-slate-700 text-slate-300 px-5 py-2 rounded-xl text-sm font-semibold hover:bg-slate-600 transition-colors">
               Cancelar
             </button>
           </div>
         </form>
       )}
 
-      {/* Lista */}
       {expirations.length === 0 ? (
-        <div className="text-center py-8 text-slate-400 text-sm">No hay vencimientos registrados</div>
+        <div className="text-center py-8 text-slate-600 text-sm">No hay vencimientos registrados</div>
       ) : (
         <div className="space-y-3">
           {expirations.map((exp) => {
@@ -221,59 +214,39 @@ const ExpirationSection = ({ vehicleId }) => {
             const tipoLabel = exp.tipo === 'otro' ? (exp.tipo_personalizado || 'Otro') : TIPO_LABELS[exp.tipo];
 
             return (
-              <div
-                key={exp.id}
-                className="group bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200"
-              >
-                {/* Barra de color superior */}
-                <div className={`h-1 w-full ${si.bar}`} />
-
+              <div key={exp.id} className="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden hover:border-slate-600 transition-colors duration-200">
+                <div className={`h-0.5 w-full ${si.bar}`} />
                 <div className="p-4">
-                  {/* Fila principal */}
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-slate-900 text-base leading-tight">{tipoLabel}</p>
-                      <p className="text-slate-400 text-xs mt-0.5">{formatDate(exp.fecha_vencimiento)}</p>
+                      <p className="font-bold text-white text-base leading-tight">{tipoLabel}</p>
+                      <p className="text-slate-500 text-xs mt-0.5">{formatDate(exp.fecha_vencimiento)}</p>
                     </div>
-                    <span className={`shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${si.pill}`}>
+                    <span className={`shrink-0 inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${si.pill}`}>
                       {si.label}
                     </span>
                   </div>
 
                   {exp.observaciones && (
-                    <p className="text-slate-500 text-sm mb-3 leading-snug">{exp.observaciones}</p>
+                    <p className="text-slate-400 text-sm mb-3 leading-snug">{exp.observaciones}</p>
                   )}
 
-                  {/* Acciones */}
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-700">
                     {isRegularizado ? (
-                      <button
-                        onClick={() => handleActivar(exp.id)}
-                        className="text-slate-400 hover:text-slate-600 text-xs font-medium transition-colors"
-                      >
+                      <button onClick={() => handleActivar(exp.id)} className="text-slate-500 hover:text-slate-300 text-xs font-medium transition-colors">
                         Reactivar
                       </button>
                     ) : (
-                      <button
-                        onClick={() => handleRegularizar(exp.id)}
-                        className="inline-flex items-center gap-1.5 bg-teal-600 text-white px-3.5 py-1.5 rounded-full text-xs font-semibold hover:bg-teal-700 active:scale-95 transition-all"
-                      >
+                      <button onClick={() => handleRegularizar(exp.id)} className="inline-flex items-center gap-1.5 bg-teal-600/80 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold hover:bg-teal-500 active:scale-95 transition-all">
                         Regularizar
                       </button>
                     )}
-
                     <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => handleEdit(exp)}
-                        className="text-blue-500 hover:text-blue-700 text-xs font-medium transition-colors"
-                      >
+                      <button onClick={() => handleEdit(exp)} className="text-slate-400 hover:text-blue-400 text-xs font-medium transition-colors">
                         Editar
                       </button>
-                      <span className="text-slate-200">·</span>
-                      <button
-                        onClick={() => handleDelete(exp.id)}
-                        className="text-slate-400 hover:text-red-500 text-xs font-medium transition-colors"
-                      >
+                      <span className="text-slate-700">·</span>
+                      <button onClick={() => handleDelete(exp.id)} className="text-slate-500 hover:text-red-400 text-xs font-medium transition-colors">
                         Eliminar
                       </button>
                     </div>
