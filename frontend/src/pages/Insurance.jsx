@@ -114,12 +114,27 @@ const Insurance = () => {
     }
   };
 
-  const handleOpen = async (docId, docType) => {
+  const handleOpen = async (docId, docType, docName) => {
     setOpening((prev) => ({ ...prev, [docId]: true }));
     try {
       const response = await api.get(`/api/documents/${docId}/view`, { responseType: 'blob' });
-      const url = URL.createObjectURL(new Blob([response.data], { type: docType }));
-      window.open(url, '_blank');
+      const blob = new Blob([response.data], { type: docType });
+      const url = URL.createObjectURL(blob);
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const isPdf = docType === 'application/pdf';
+
+      const link = document.createElement('a');
+      link.href = url;
+      if (isMobile && isPdf) {
+        link.download = docName;
+      } else {
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+      }
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch {
       toast.error('No se pudo abrir el documento');
     } finally {
@@ -241,7 +256,7 @@ const Insurance = () => {
                           <div className="flex items-center gap-2 shrink-0 ml-4">
                             <button
                               type="button"
-                              onClick={() => handleOpen(doc.id, doc.type)}
+                              onClick={() => handleOpen(doc.id, doc.type, doc.name)}
                               disabled={opening[doc.id]}
                               className="rounded-xl border border-slate-700 bg-slate-800 px-3.5 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-700 hover:text-white transition disabled:opacity-50"
                             >

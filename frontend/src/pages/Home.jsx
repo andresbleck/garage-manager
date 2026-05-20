@@ -51,7 +51,7 @@ const Home = () => {
       <div className="max-w-4xl mx-auto pt-10 pb-16 px-4 text-center">
 
         {/* Título */}
-        <h1 className="anim-1 text-6xl sm:text-7xl font-extrabold text-white tracking-tight mb-6">
+        <h1 className="anim-1 text-4xl sm:text-6xl font-extrabold text-white tracking-tight mb-6">
           Garage<span className="text-blue-500">Manager</span>
         </h1>
 
